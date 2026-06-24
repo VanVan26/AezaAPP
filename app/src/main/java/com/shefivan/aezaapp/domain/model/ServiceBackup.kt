@@ -5,18 +5,21 @@ import java.time.Instant
 enum class ServiceBackupSource {
     MANUAL,
     SCHEDULE,
+    UNKNOWN,
 }
 
 enum class ServiceBackupStatus {
     CREATING,
     ACTIVE,
     DELETED,
+    UNKNOWN,
 }
 
 enum class ServiceBackupScheduleType {
     DAILY,
     WEEKLY,
     MONTHLY,
+    UNKNOWN,
 }
 
 data class ServiceBackup(
@@ -34,4 +37,3 @@ data class ServiceBackupSchedule(
     val weekDay: Int? = null,
     val monthDay: Int? = null,
 )
-

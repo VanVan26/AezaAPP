@@ -6,16 +6,19 @@ enum class AccountBonusState {
     NOT_USED,
     LOCKED,
     UNLOCKED,
+    UNKNOWN,
 }
 
 enum class AccountRegion {
     GLOBAL,
     RU,
+    UNKNOWN,
 }
 
 enum class AccountProfileType {
     LEGAL,
     PERSON,
+    UNKNOWN,
 }
 
 data class AccountInterfaceSettings(
@@ -63,4 +66,3 @@ data class Account(
     val currency: String,
     val permittedDebt: BigDecimal,
 )
-

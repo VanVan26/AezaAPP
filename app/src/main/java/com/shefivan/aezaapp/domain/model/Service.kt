@@ -13,6 +13,7 @@ enum class ServiceTerm {
     HALF_YEAR,
     YEAR,
     ETERNAL,
+    UNKNOWN,
 }
 
 enum class ServiceStatus {
@@ -23,6 +24,7 @@ enum class ServiceStatus {
     DELETED,
     BLOCKED,
     RESCUE,
+    UNKNOWN,
 }
 
 enum class ServiceTaskStatus {
@@ -33,6 +35,7 @@ enum class ServiceTaskStatus {
     CANCELLED,
     WAIT_CHILD,
     MANUAL,
+    UNKNOWN,
 }
 
 enum class ServiceCapability(val apiValue: String) {
@@ -121,4 +124,3 @@ data class ServiceStatsRequest(
 data class ServiceStats(
     val data: List<String>,
 )
-
