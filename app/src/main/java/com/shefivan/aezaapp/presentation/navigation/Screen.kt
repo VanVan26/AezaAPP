@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 
 sealed interface Screen {
     @Serializable data object Auth : Screen
+    @Serializable data object Home : Screen
     @Serializable data object Services : Screen
     @Serializable data class ServiceDetail(val serviceId: Long) : Screen
     @Serializable data object Account : Screen

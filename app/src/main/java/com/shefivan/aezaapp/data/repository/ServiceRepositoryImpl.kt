@@ -3,6 +3,7 @@
 import com.shefivan.aezaapp.data.mapper.toChangePasswordRequestDto
 import com.shefivan.aezaapp.data.mapper.toDomain
 import com.shefivan.aezaapp.data.mapper.toDto
+import com.shefivan.aezaapp.domain.model.ServiceTransaction
 import com.shefivan.aezaapp.data.remote.api.AezaApiService
 import com.shefivan.aezaapp.data.remote.dto.ServiceSuspendRequestDto
 import com.shefivan.aezaapp.domain.model.Page
@@ -12,6 +13,7 @@ import com.shefivan.aezaapp.domain.model.RemoteVncSession
 import com.shefivan.aezaapp.domain.model.Service
 import com.shefivan.aezaapp.domain.model.ServiceStats
 import com.shefivan.aezaapp.domain.model.ServiceStatsRequest
+import com.shefivan.aezaapp.domain.model.ServiceTask
 import com.shefivan.aezaapp.domain.repository.ServiceRepository
 import javax.inject.Inject
 
@@ -68,4 +70,9 @@ class ServiceRepositoryImpl @Inject constructor(
         fromDate = request.fromDate.toString(),
         toDate = request.toDate.toString(),
     ).toDomain()
+
+    override suspend fun getTasks(id: Long): Page<ServiceTask> = api.getServiceTasks(id).toDomain()
+
+    override suspend fun getTransactions(serviceId: Long): Page<ServiceTransaction> =
+        api.getServiceTransactions(serviceId).toDomain()
 }

@@ -7,6 +7,8 @@ import com.shefivan.aezaapp.domain.model.RemoteVncSession
 import com.shefivan.aezaapp.domain.model.Service
 import com.shefivan.aezaapp.domain.model.ServiceStats
 import com.shefivan.aezaapp.domain.model.ServiceStatsRequest
+import com.shefivan.aezaapp.domain.model.ServiceTask
+import com.shefivan.aezaapp.domain.model.ServiceTransaction
 
 interface ServiceRepository {
     suspend fun getServices(query: PageQuery = PageQuery()): Page<Service>
@@ -32,5 +34,9 @@ interface ServiceRepository {
     suspend fun reinstall(id: Long, request: ReinstallServiceRequest)
 
     suspend fun getStats(id: Long, request: ServiceStatsRequest): ServiceStats
+
+    suspend fun getTasks(id: Long): Page<ServiceTask>
+
+    suspend fun getTransactions(serviceId: Long): Page<ServiceTransaction>
 }
 

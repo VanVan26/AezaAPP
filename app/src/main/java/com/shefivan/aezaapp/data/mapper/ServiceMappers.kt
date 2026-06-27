@@ -7,6 +7,7 @@ import com.shefivan.aezaapp.data.remote.dto.RemoteVncResponseDto
 import com.shefivan.aezaapp.data.remote.dto.ServiceResponseDto
 import com.shefivan.aezaapp.data.remote.dto.ServiceSmallResponseDto
 import com.shefivan.aezaapp.data.remote.dto.ServiceStatsResponseDto
+import com.shefivan.aezaapp.data.remote.dto.ServiceTaskListResponseDto
 import com.shefivan.aezaapp.data.remote.dto.ServicesListResponseDto
 import com.shefivan.aezaapp.domain.model.Page
 import com.shefivan.aezaapp.domain.model.ReinstallServiceRequest
@@ -102,6 +103,11 @@ internal fun RemoteVncResponseDto.toDomain(): RemoteVncSession = RemoteVncSessio
 )
 
 internal fun ServiceStatsResponseDto.toDomain(): ServiceStats = ServiceStats(data = data)
+
+internal fun ServiceTaskListResponseDto.toDomain(): Page<ServiceTask> = Page(
+    items = items.map { it.toDomain() },
+    total = total,
+)
 
 internal fun String.toChangePasswordRequestDto(): ChangePasswordRequestDto = ChangePasswordRequestDto(password = this)
 

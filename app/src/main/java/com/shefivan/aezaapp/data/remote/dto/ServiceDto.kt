@@ -88,6 +88,12 @@ data class ServiceStatsResponseDto(
 )
 
 @Serializable
+data class ServiceTaskListResponseDto(
+    val items: List<ServiceTaskResponseDto> = emptyList(),
+    val total: Int = 0,
+)
+
+@Serializable
 data class ServiceSuspendRequestDto(
     val force: Boolean = false,
 )

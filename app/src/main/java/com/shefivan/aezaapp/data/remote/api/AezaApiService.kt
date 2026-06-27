@@ -26,6 +26,7 @@ import com.shefivan.aezaapp.data.remote.dto.RemoteVncResponseDto
 import com.shefivan.aezaapp.data.remote.dto.SaveUploadedFileRequestDto
 import com.shefivan.aezaapp.data.remote.dto.SendTicketMessageRequestDto
 import com.shefivan.aezaapp.data.remote.dto.ServiceBackupListResponseDto
+import com.shefivan.aezaapp.data.remote.dto.ServiceTaskListResponseDto
 import com.shefivan.aezaapp.data.remote.dto.ServiceBackupResponseDto
 import com.shefivan.aezaapp.data.remote.dto.ServiceResponseDto
 import com.shefivan.aezaapp.data.remote.dto.ServiceStatsResponseDto
@@ -43,6 +44,7 @@ import com.shefivan.aezaapp.data.remote.dto.TicketMessageResponseDto
 import com.shefivan.aezaapp.data.remote.dto.TicketRateRequestDto
 import com.shefivan.aezaapp.data.remote.dto.TicketRateResponseDto
 import com.shefivan.aezaapp.data.remote.dto.TicketResponseDto
+import com.shefivan.aezaapp.data.remote.dto.TransactionListResponseDto
 import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -120,6 +122,13 @@ interface AezaApiService {
         @Query("fromDate") fromDate: String,
         @Query("toDate") toDate: String,
     ): ServiceStatsResponseDto
+
+    @GET("services/{id}/tasks")
+    suspend fun getServiceTasks(
+        @Path("id") id: Long,
+        @Query("offset") offset: Int? = null,
+        @Query("limit") limit: Int? = null,
+    ): ServiceTaskListResponseDto
 
     @GET("services/ssh-keys")
     suspend fun getSshKeys(
@@ -316,4 +325,12 @@ interface AezaApiService {
         @Path("ticketId") ticketId: Long,
         @Body body: TicketRateRequestDto,
     ): TicketRateResponseDto
+
+    // Billing
+    @GET("billing/transactions/{serviceId}")
+    suspend fun getServiceTransactions(
+        @Path("serviceId") serviceId: Long,
+        @Query("offset") offset: Int? = null,
+        @Query("limit") limit: Int? = null,
+    ): TransactionListResponseDto
 }
