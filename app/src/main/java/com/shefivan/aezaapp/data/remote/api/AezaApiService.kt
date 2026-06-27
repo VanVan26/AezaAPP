@@ -13,7 +13,6 @@ import com.shefivan.aezaapp.data.remote.dto.DomainListResponseDto
 import com.shefivan.aezaapp.data.remote.dto.DomainRecordListResponseDto
 import com.shefivan.aezaapp.data.remote.dto.DomainRecordResponseDto
 import com.shefivan.aezaapp.data.remote.dto.DomainRecordTypeListResponseDto
-import com.shefivan.aezaapp.data.remote.dto.DomainRecordTypeResponseDto
 import com.shefivan.aezaapp.data.remote.dto.DomainResponseDto
 import com.shefivan.aezaapp.data.remote.dto.EditDomainRecordRequestDto
 import com.shefivan.aezaapp.data.remote.dto.EditSshKeyRequestDto

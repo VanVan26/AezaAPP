@@ -659,15 +659,15 @@ class ServiceDetailViewModel @Inject constructor(
 
         private fun ServiceTransaction.toTransactionUiItem(symbol: String): TransactionUiItem {
             val displayDate = (performedAt ?: createdAt).let { taskDateFormatter.format(it) }
-            val absValue = java.math.BigDecimal(amount).abs()
-                .divide(java.math.BigDecimal(100))
-                .setScale(2, java.math.RoundingMode.HALF_UP)
+            val absValue = BigDecimal(amount).abs()
+                .divide(BigDecimal(100))
+                .setScale(2, RoundingMode.HALF_UP)
             val isCredit = amount >= 0
             val amountLabel = if (isCredit) "+$symbol $absValue" else "−$symbol $absValue"
             val bonusLabel = if (bonusAmount != 0L) {
-                val absBonus = java.math.BigDecimal(bonusAmount).abs()
-                    .divide(java.math.BigDecimal(100))
-                    .setScale(2, java.math.RoundingMode.HALF_UP)
+                val absBonus = BigDecimal(bonusAmount).abs()
+                    .divide(BigDecimal(100))
+                    .setScale(2, RoundingMode.HALF_UP)
                 if (bonusAmount >= 0) "+бонус $absBonus" else "−бонус $absBonus"
             } else null
             return TransactionUiItem(

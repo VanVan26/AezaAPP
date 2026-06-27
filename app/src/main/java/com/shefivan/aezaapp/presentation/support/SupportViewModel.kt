@@ -34,7 +34,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SupportViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val getTickets: GetSupportTicketsUseCase,
     private val createTicket: CreateTicketUseCase,
     private val getMessages: GetTicketMessagesUseCase,

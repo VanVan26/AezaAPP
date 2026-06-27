@@ -19,7 +19,7 @@ import javax.inject.Named
 
 class FileRepositoryImpl @Inject constructor(
     private val api: AezaApiService,
-    @Named("raw") private val rawHttpClient: OkHttpClient,
+    @param:Named("raw") private val rawHttpClient: OkHttpClient,
 ) : FileRepository {
     override suspend fun createUploadLink(fileName: String): FileUploadLink =
         api.createFileUploadLink(CreateFileUploadLinkRequestDto(fileName)).toDomain()

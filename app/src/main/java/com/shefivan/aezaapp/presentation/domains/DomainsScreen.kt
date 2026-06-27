@@ -398,7 +398,7 @@ private fun NameserversCard(nameservers: List<String>) {
                     text = ns,
                     fontSize = 12.sp,
                     color = TextPrimary,
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    fontFamily = FontFamily.Monospace,
                 )
             }
         }
