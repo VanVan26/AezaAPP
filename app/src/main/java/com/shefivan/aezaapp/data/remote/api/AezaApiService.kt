@@ -8,9 +8,11 @@ import com.shefivan.aezaapp.data.remote.dto.CreateFileUploadLinkRequestDto
 import com.shefivan.aezaapp.data.remote.dto.CreateServiceBackupRequestDto
 import com.shefivan.aezaapp.data.remote.dto.CreateSshKeyRequestDto
 import com.shefivan.aezaapp.data.remote.dto.CreateTicketRequestDto
+import com.shefivan.aezaapp.data.remote.dto.DomainExpectedNameserversResponseDto
 import com.shefivan.aezaapp.data.remote.dto.DomainListResponseDto
 import com.shefivan.aezaapp.data.remote.dto.DomainRecordListResponseDto
 import com.shefivan.aezaapp.data.remote.dto.DomainRecordResponseDto
+import com.shefivan.aezaapp.data.remote.dto.DomainRecordTypeListResponseDto
 import com.shefivan.aezaapp.data.remote.dto.DomainRecordTypeResponseDto
 import com.shefivan.aezaapp.data.remote.dto.DomainResponseDto
 import com.shefivan.aezaapp.data.remote.dto.EditDomainRecordRequestDto
@@ -26,7 +28,6 @@ import com.shefivan.aezaapp.data.remote.dto.RemoteVncResponseDto
 import com.shefivan.aezaapp.data.remote.dto.SaveUploadedFileRequestDto
 import com.shefivan.aezaapp.data.remote.dto.SendTicketMessageRequestDto
 import com.shefivan.aezaapp.data.remote.dto.ServiceBackupListResponseDto
-import com.shefivan.aezaapp.data.remote.dto.ServiceTaskListResponseDto
 import com.shefivan.aezaapp.data.remote.dto.ServiceBackupResponseDto
 import com.shefivan.aezaapp.data.remote.dto.ServiceResponseDto
 import com.shefivan.aezaapp.data.remote.dto.ServiceStatsResponseDto
@@ -122,13 +123,6 @@ interface AezaApiService {
         @Query("fromDate") fromDate: String,
         @Query("toDate") toDate: String,
     ): ServiceStatsResponseDto
-
-    @GET("services/{id}/tasks")
-    suspend fun getServiceTasks(
-        @Path("id") id: Long,
-        @Query("offset") offset: Int? = null,
-        @Query("limit") limit: Int? = null,
-    ): ServiceTaskListResponseDto
 
     @GET("services/ssh-keys")
     suspend fun getSshKeys(
@@ -241,10 +235,10 @@ interface AezaApiService {
     suspend fun getDomain(@Path("id") id: Long): DomainResponseDto
 
     @GET("domains/nameservers")
-    suspend fun getExpectedNameservers(): List<String>
+    suspend fun getExpectedNameservers(): DomainExpectedNameserversResponseDto
 
     @GET("domains/record-types")
-    suspend fun getRecordTypes(): List<DomainRecordTypeResponseDto>
+    suspend fun getRecordTypes(): DomainRecordTypeListResponseDto
 
     @GET("domains/{domainId}/records")
     suspend fun getDomainRecords(
@@ -275,10 +269,10 @@ interface AezaApiService {
     )
 
     // File
-    @POST("files/upload-link")
+    @POST("files")
     suspend fun createFileUploadLink(@Body body: CreateFileUploadLinkRequestDto): FileUploadLinkResponseDto
 
-    @POST("files")
+    @POST("files/save")
     suspend fun saveUploadedFile(@Body body: SaveUploadedFileRequestDto): FileAssetResponseDto
 
     // Support
@@ -310,7 +304,7 @@ interface AezaApiService {
     @POST("support/tickets/{ticketId}/read")
     suspend fun markSupportTicketAsRead(@Path("ticketId") ticketId: Long)
 
-    @POST("support/tickets/{ticketId}/messages/{messageId}/reaction")
+    @PATCH("support/tickets/{ticketId}/messages/{messageId}/reaction")
     suspend fun setTicketMessageReaction(
         @Path("ticketId") ticketId: Long,
         @Path("messageId") messageId: Long,
@@ -327,10 +321,11 @@ interface AezaApiService {
     ): TicketRateResponseDto
 
     // Billing
-    @GET("billing/transactions/{serviceId}")
+    @GET("billing/transactions")
     suspend fun getServiceTransactions(
-        @Path("serviceId") serviceId: Long,
-        @Query("offset") offset: Int? = null,
-        @Query("limit") limit: Int? = null,
+        @Query("sort") sort: String?,
+        @Query("limit") limit: Int?,
+        @Query("offset") offset: Int?,
+        @Query("filter") filter: String?,
     ): TransactionListResponseDto
 }

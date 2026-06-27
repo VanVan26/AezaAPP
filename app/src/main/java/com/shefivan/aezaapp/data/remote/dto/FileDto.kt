@@ -19,11 +19,11 @@ data class FileUploadLinkResponseDto(
 
 @Serializable
 data class CreateFileUploadLinkRequestDto(
-    val fileName: String,
+    val name: String,
 )
 
 @Serializable
 data class SaveUploadedFileRequestDto(
     val key: String,
-    val fileName: String,
+    val name: String,
 )

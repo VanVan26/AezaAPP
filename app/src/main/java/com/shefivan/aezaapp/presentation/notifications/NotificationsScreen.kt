@@ -1,5 +1,7 @@
 package com.shefivan.aezaapp.presentation.notifications
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -32,8 +35,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -89,13 +94,15 @@ fun NotificationsScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(uiState.notifications, key = { it.id }) { notification ->
+                        val isExpanded = uiState.expandedIds.contains(notification.id)
+                        val isLoadingDetail = uiState.loadingDetailIds.contains(notification.id)
+                        val fullText = uiState.detailTexts[notification.id]
                         NotificationCard(
                             item = notification,
-                            onClick = {
-                                if (!notification.isRead) {
-                                    viewModel.processCommand(NotificationsViewModel.Command.MarkRead(notification.id))
-                                }
-                            },
+                            isExpanded = isExpanded,
+                            isLoadingDetail = isLoadingDetail,
+                            fullText = fullText,
+                            onClick = { viewModel.processCommand(NotificationsViewModel.Command.ToggleExpand(notification.id)) },
                         )
                     }
                 }
@@ -138,45 +145,90 @@ private fun NotificationsTopBar(
 @Composable
 private fun NotificationCard(
     item: NotificationsViewModel.NotificationUiItem,
+    isExpanded: Boolean,
+    isLoadingDetail: Boolean,
+    fullText: String?,
     onClick: () -> Unit,
 ) {
-    Row(
+    val chevronAngle by animateFloatAsState(targetValue = if (isExpanded) 180f else 0f, label = "chevron")
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(CardShape)
             .border(1.dp, BorderColor, CardShape)
             .background(if (item.isRead) Color.White else Color(0xFFF0F7FF))
-            .clickable(onClick = onClick)
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.Top,
+            .clickable(onClick = onClick),
     ) {
-        if (!item.isRead) {
-            Box(
-                modifier = Modifier
-                    .padding(top = 5.dp)
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(UnreadDot),
-            )
-        } else {
-            Box(modifier = Modifier.size(8.dp).padding(top = 5.dp))
-        }
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
         ) {
-            Text(
-                text = item.text,
-                fontSize = 14.sp,
-                color = TextPrimary,
-                lineHeight = 20.sp,
+            if (!item.isRead) {
+                Box(
+                    modifier = Modifier
+                        .padding(top = 5.dp)
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(UnreadDot),
+                )
+            } else {
+                Box(modifier = Modifier.size(8.dp).padding(top = 5.dp))
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = item.text,
+                    fontSize = 14.sp,
+                    color = TextPrimary,
+                    lineHeight = 20.sp,
+                    maxLines = if (isExpanded) Int.MAX_VALUE else 2,
+                    overflow = if (isExpanded) TextOverflow.Clip else TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = item.date,
+                    fontSize = 12.sp,
+                    color = TextSecondary,
+                )
+            }
+            Icon(
+                imageVector = Icons.Outlined.KeyboardArrowDown,
+                contentDescription = if (isExpanded) "Свернуть" else "Развернуть",
+                tint = TextSecondary,
+                modifier = Modifier
+                    .padding(top = 2.dp)
+                    .size(20.dp)
+                    .rotate(chevronAngle),
             )
-            Text(
-                text = item.date,
-                fontSize = 12.sp,
-                color = TextSecondary,
-            )
+        }
+
+        AnimatedVisibility(visible = isExpanded && (isLoadingDetail || (fullText != null && fullText != item.text))) {
+            Column {
+                HorizontalDivider(color = BorderColor)
+                if (isLoadingDetail) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = TextPrimary)
+                    }
+                } else if (fullText != null && fullText != item.text) {
+                    Text(
+                        text = fullText,
+                        fontSize = 14.sp,
+                        color = TextPrimary,
+                        lineHeight = 20.sp,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    )
+                }
+            }
         }
     }
 }

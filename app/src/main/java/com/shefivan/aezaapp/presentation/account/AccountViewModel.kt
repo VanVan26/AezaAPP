@@ -7,6 +7,9 @@ import com.shefivan.aezaapp.domain.model.AccountProfileType
 import com.shefivan.aezaapp.domain.model.AccountRegion
 import com.shefivan.aezaapp.domain.usecase.account.GetAccountUseCase
 import com.shefivan.aezaapp.domain.usecase.auth.ClearApiKeyUseCase
+import com.shefivan.aezaapp.domain.usecase.system.GetHealthUseCase
+import com.shefivan.aezaapp.domain.usecase.system.GetSystemAlertsUseCase
+import com.shefivan.aezaapp.domain.usecase.system.GetVersionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,7 +26,17 @@ import javax.inject.Inject
 class AccountViewModel @Inject constructor(
     private val getAccount: GetAccountUseCase,
     private val clearApiKey: ClearApiKeyUseCase,
+    private val getHealth: GetHealthUseCase,
+    private val getVersion: GetVersionUseCase,
+    private val getSystemAlerts: GetSystemAlertsUseCase,
 ) : ViewModel() {
+
+    data class SystemAlertUiItem(
+        val id: Long,
+        val title: String?,
+        val body: String,
+        val slot: String,
+    )
 
     data class UiState(
         val isLoading: Boolean = true,
@@ -42,6 +55,9 @@ class AccountViewModel @Inject constructor(
         val roles: List<String> = emptyList(),
         val bonusState: String = "",
         val profileType: String = "",
+        val apiVersion: String? = null,
+        val healthStatus: String? = null,
+        val systemAlerts: List<SystemAlertUiItem> = emptyList(),
     )
 
     sealed interface Command {
@@ -60,7 +76,10 @@ class AccountViewModel @Inject constructor(
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     init {
-        viewModelScope.launch { load() }
+        viewModelScope.launch {
+            load()
+            loadSystemStatus()
+        }
     }
 
     fun processCommand(command: Command) {
@@ -68,6 +87,7 @@ class AccountViewModel @Inject constructor(
             is Command.Refresh -> viewModelScope.launch {
                 _uiState.update { it.copy(isRefreshing = true) }
                 load()
+                loadSystemStatus()
             }
             is Command.Logout -> viewModelScope.launch {
                 clearApiKey()
@@ -105,6 +125,19 @@ class AccountViewModel @Inject constructor(
                 roles = account.roles,
                 bonusState = account.bonusState.toLabel(),
                 profileType = account.profile.type.toLabel(),
+            )
+        }
+    }
+
+    private suspend fun loadSystemStatus() {
+        val version = getVersion()
+        val health = getHealth()
+        val alerts = getSystemAlerts("")
+        _uiState.update {
+            it.copy(
+                apiVersion = version,
+                healthStatus = health,
+                systemAlerts = alerts?.map { a -> SystemAlertUiItem(a.id, a.title, a.body, a.slot) } ?: emptyList(),
             )
         }
     }

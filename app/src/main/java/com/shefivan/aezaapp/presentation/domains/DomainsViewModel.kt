@@ -3,11 +3,16 @@ package com.shefivan.aezaapp.presentation.domains
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.shefivan.aezaapp.domain.model.CreateDomainRecordInput
+import com.shefivan.aezaapp.domain.model.EditDomainRecordInput
 import com.shefivan.aezaapp.domain.usecase.domain.CreateDomainRecordUseCase
 import com.shefivan.aezaapp.domain.usecase.domain.CreateDomainUseCase
 import com.shefivan.aezaapp.domain.usecase.domain.DeleteDomainRecordUseCase
+import com.shefivan.aezaapp.domain.usecase.domain.EditDomainRecordUseCase
+import com.shefivan.aezaapp.domain.usecase.domain.GetDomainRecordTypesUseCase
 import com.shefivan.aezaapp.domain.usecase.domain.GetDomainRecordsUseCase
+import com.shefivan.aezaapp.domain.usecase.domain.GetDomainUseCase
 import com.shefivan.aezaapp.domain.usecase.domain.GetDomainsUseCase
+import com.shefivan.aezaapp.domain.usecase.domain.GetExpectedNameserversUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,10 +26,14 @@ import javax.inject.Inject
 @HiltViewModel
 class DomainsViewModel @Inject constructor(
     private val getDomains: GetDomainsUseCase,
+    private val getDomain: GetDomainUseCase,
     private val createDomain: CreateDomainUseCase,
     private val getRecords: GetDomainRecordsUseCase,
     private val deleteRecord: DeleteDomainRecordUseCase,
     private val createRecord: CreateDomainRecordUseCase,
+    private val editRecord: EditDomainRecordUseCase,
+    private val getRecordTypes: GetDomainRecordTypesUseCase,
+    private val getExpectedNameservers: GetExpectedNameserversUseCase,
 ) : ViewModel() {
 
     data class DomainUiItem(
@@ -32,6 +41,13 @@ class DomainsViewModel @Inject constructor(
         val name: String,
         val status: String,
         val createdDate: String,
+    )
+
+    data class DomainDetailUiItem(
+        val statusReason: String?,
+        val observedNameservers: List<String>,
+        val nsCheckedAt: String?,
+        val updatedDate: String,
     )
 
     data class RecordUiItem(
@@ -58,6 +74,17 @@ class DomainsViewModel @Inject constructor(
         val deletingRecordIds: Set<Long> = emptySet(),
         val showAddRecordDialog: Boolean = false,
         val isCreatingRecord: Boolean = false,
+        val recordTypes: List<String> = emptyList(),
+        val expectedNameservers: List<String> = emptyList(),
+
+        // Domain expand
+        val expandedDomainIds: Set<Long> = emptySet(),
+        val domainDetails: Map<Long, DomainDetailUiItem> = emptyMap(),
+        val loadingDomainDetailIds: Set<Long> = emptySet(),
+
+        // Edit record
+        val editingRecord: RecordUiItem? = null,
+        val isEditingRecord: Boolean = false,
     )
 
     sealed interface Command {
@@ -72,13 +99,21 @@ class DomainsViewModel @Inject constructor(
         data object DismissAddRecordDialog : Command
         data class ConfirmAddRecord(val type: String, val name: String, val content: String, val ttl: Int) : Command
         data class DeleteRecord(val recordId: Long) : Command
+        data class OpenEditRecordDialog(val record: RecordUiItem) : Command
+        data object DismissEditRecordDialog : Command
+        data class ConfirmEditRecord(val content: String, val ttl: Int, val isEnabled: Boolean) : Command
+        data class ToggleDomainExpand(val id: Long) : Command
     }
 
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     init {
-        viewModelScope.launch { loadDomains() }
+        viewModelScope.launch {
+            loadDomains()
+            loadRecordTypes()
+            loadExpectedNameservers()
+        }
     }
 
     fun processCommand(command: Command) {
@@ -143,6 +178,50 @@ class DomainsViewModel @Inject constructor(
                     loadRecords(domainId)
                 }
             }
+            is Command.OpenEditRecordDialog ->
+                _uiState.update { it.copy(editingRecord = command.record) }
+            is Command.DismissEditRecordDialog ->
+                _uiState.update { it.copy(editingRecord = null) }
+            is Command.ToggleDomainExpand -> {
+                val id = command.id
+                val state = _uiState.value
+                if (state.expandedDomainIds.contains(id)) {
+                    _uiState.update { it.copy(expandedDomainIds = it.expandedDomainIds - id) }
+                } else {
+                    _uiState.update { it.copy(expandedDomainIds = it.expandedDomainIds + id) }
+                    if (!state.domainDetails.containsKey(id)) {
+                        viewModelScope.launch {
+                            _uiState.update { it.copy(loadingDomainDetailIds = it.loadingDomainDetailIds + id) }
+                            val domain = getDomain(id)
+                            _uiState.update { s ->
+                                s.copy(
+                                    loadingDomainDetailIds = s.loadingDomainDetailIds - id,
+                                    domainDetails = if (domain != null) s.domainDetails + (id to DomainDetailUiItem(
+                                        statusReason = domain.statusReason,
+                                        observedNameservers = domain.observedNameservers ?: emptyList(),
+                                        nsCheckedAt = domain.nsCheckedAt?.let { dateFormatter.format(it) },
+                                        updatedDate = dateFormatter.format(domain.updatedAt),
+                                    )) else s.domainDetails,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            is Command.ConfirmEditRecord -> {
+                val domainId = _uiState.value.selectedDomain?.id ?: return
+                val recordId = _uiState.value.editingRecord?.id ?: return
+                _uiState.update { it.copy(editingRecord = null, isEditingRecord = true) }
+                viewModelScope.launch {
+                    editRecord(domainId, recordId, EditDomainRecordInput(
+                        content = command.content,
+                        ttl = command.ttl,
+                        isEnabled = command.isEnabled,
+                    ))
+                    _uiState.update { it.copy(isEditingRecord = false) }
+                    loadRecords(domainId)
+                }
+            }
         }
     }
 
@@ -181,6 +260,18 @@ class DomainsViewModel @Inject constructor(
                     )
                 } ?: emptyList(),
             )
+        }
+    }
+
+    private suspend fun loadRecordTypes() {
+        val types = getRecordTypes()
+        _uiState.update { it.copy(recordTypes = types?.map { t -> t.name } ?: emptyList()) }
+    }
+
+    private suspend fun loadExpectedNameservers() {
+        val ns = getExpectedNameservers()
+        if (!ns.isNullOrEmpty()) {
+            _uiState.update { it.copy(expectedNameservers = ns) }
         }
     }
 

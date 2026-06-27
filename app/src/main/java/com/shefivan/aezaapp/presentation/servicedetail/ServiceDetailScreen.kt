@@ -794,10 +794,10 @@ private fun HistoryTab(
                 contentAlignment = Alignment.Center,
             ) { CircularProgressIndicator(color = TextPrimary) }
 
-            uiState.tasks.isEmpty() -> Box(
+            uiState.transactions.isEmpty() -> Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
-            ) { Text("Нет задач", fontSize = 15.sp, color = TextSecondary) }
+            ) { Text("Нет транзакций", fontSize = 15.sp, color = TextSecondary) }
 
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -806,8 +806,8 @@ private fun HistoryTab(
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(uiState.tasks, key = { it.id }) { task ->
-                    TaskCard(task)
+                items(uiState.transactions, key = { it.id }) { transaction ->
+                    TransactionCard(transaction)
                 }
             }
         }
@@ -815,13 +815,8 @@ private fun HistoryTab(
 }
 
 @Composable
-private fun TaskCard(task: ServiceDetailViewModel.TaskUiItem) {
-    val statusColor = when (task.statusColor) {
-        1 -> StatusActive
-        2 -> DangerColor
-        3 -> Color(0xFF1976D2)
-        else -> TextSecondary
-    }
+private fun TransactionCard(transaction: ServiceDetailViewModel.TransactionUiItem) {
+    val amountColor = if (transaction.isCredit) StatusActive else DangerColor
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -833,16 +828,22 @@ private fun TaskCard(task: ServiceDetailViewModel.TaskUiItem) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(text = task.name, fontSize = 14.sp, color = TextPrimary)
-            Text(text = task.createdDate, fontSize = 12.sp, color = TextSecondary)
+            Text(text = transaction.typeLabel, fontSize = 14.sp, color = TextPrimary, fontWeight = FontWeight.Medium)
+            Text(text = transaction.date, fontSize = 12.sp, color = TextSecondary)
+            if (transaction.statusLabel.isNotBlank()) {
+                Text(text = transaction.statusLabel, fontSize = 11.sp, color = TextSecondary)
+            }
         }
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(6.dp))
-                .background(statusColor.copy(alpha = 0.1f))
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-        ) {
-            Text(text = task.statusLabel, fontSize = 12.sp, color = statusColor)
+        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = transaction.amountLabel,
+                fontSize = 14.sp,
+                color = amountColor,
+                fontWeight = FontWeight.SemiBold,
+            )
+            if (transaction.bonusLabel != null) {
+                Text(text = transaction.bonusLabel, fontSize = 11.sp, color = TextSecondary)
+            }
         }
     }
 }

@@ -43,6 +43,12 @@ data class DomainRecordResponseDto(
 )
 
 @Serializable
+data class DomainRecordTypeListResponseDto(
+    val items: List<DomainRecordTypeResponseDto> = emptyList(),
+    val total: Int = 0,
+)
+
+@Serializable
 data class DomainRecordTypeResponseDto(
     val name: String = "",
     val description: String? = null,
@@ -55,6 +61,11 @@ data class DomainRecordTypePartResponseDto(
     val slug: String = "",
     val pattern: String? = null,
     val type: String = "",
+)
+
+@Serializable
+data class DomainExpectedNameserversResponseDto(
+    val items: List<String> = emptyList(),
 )
 
 @Serializable

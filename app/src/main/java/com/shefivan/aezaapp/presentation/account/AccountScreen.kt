@@ -95,6 +95,9 @@ fun AccountScreen(
                 if (uiState.roles.isNotEmpty()) {
                     item { RolesCard(uiState.roles) }
                 }
+                if (uiState.apiVersion != null || uiState.healthStatus != null || uiState.systemAlerts.isNotEmpty()) {
+                    item { SystemStatusCard(uiState) }
+                }
                 item {
                     Button(
                         onClick = { viewModel.processCommand(AccountViewModel.Command.Logout) },
@@ -277,6 +280,53 @@ private fun RolesCard(roles: List<String>) {
         roles.forEachIndexed { index, role ->
             Text(text = role, fontSize = 13.sp, color = TextPrimary)
             if (index < roles.lastIndex) HorizontalDivider(color = BorderColor)
+        }
+    }
+}
+
+@Composable
+private fun SystemStatusCard(uiState: AccountViewModel.UiState) {
+    val healthOk = uiState.healthStatus != null
+    val healthColor = if (healthOk) AccentGreen else TextSecondary
+    val healthLabel = if (healthOk) "OK" else "—"
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(CardShape)
+            .border(1.dp, BorderColor, CardShape)
+            .background(Color.White)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text("Состояние системы", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary)
+        HorizontalDivider(color = BorderColor)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Статус API", fontSize = 13.sp, color = TextSecondary)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(healthColor))
+                Text(text = healthLabel, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = healthColor)
+            }
+        }
+        if (uiState.apiVersion != null) {
+            HorizontalDivider(color = BorderColor)
+            InfoRow(label = "Версия API", value = uiState.apiVersion)
+        }
+        if (uiState.systemAlerts.isNotEmpty()) {
+            HorizontalDivider(color = BorderColor)
+            uiState.systemAlerts.forEachIndexed { index, alert ->
+                if (index > 0) HorizontalDivider(color = BorderColor)
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    if (alert.title != null) {
+                        Text(text = alert.title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                    }
+                    Text(text = alert.body, fontSize = 12.sp, color = TextSecondary, lineHeight = 18.sp)
+                }
+            }
         }
     }
 }

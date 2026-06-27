@@ -13,7 +13,6 @@ import com.shefivan.aezaapp.domain.model.RemoteVncSession
 import com.shefivan.aezaapp.domain.model.Service
 import com.shefivan.aezaapp.domain.model.ServiceStats
 import com.shefivan.aezaapp.domain.model.ServiceStatsRequest
-import com.shefivan.aezaapp.domain.model.ServiceTask
 import com.shefivan.aezaapp.domain.repository.ServiceRepository
 import javax.inject.Inject
 
@@ -71,8 +70,11 @@ class ServiceRepositoryImpl @Inject constructor(
         toDate = request.toDate.toString(),
     ).toDomain()
 
-    override suspend fun getTasks(id: Long): Page<ServiceTask> = api.getServiceTasks(id).toDomain()
-
     override suspend fun getTransactions(serviceId: Long): Page<ServiceTransaction> =
-        api.getServiceTransactions(serviceId).toDomain()
+        api.getServiceTransactions(
+            sort = "id DESC",
+            limit = 1000,
+            offset = 0,
+            filter = "[[\"serviceId\",$serviceId]]",
+        ).toDomain()
 }

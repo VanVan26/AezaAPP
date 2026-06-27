@@ -15,8 +15,6 @@ import com.shefivan.aezaapp.domain.model.ServiceBackupStatus
 import com.shefivan.aezaapp.domain.model.ServiceCapability
 import com.shefivan.aezaapp.domain.model.ServiceStatsRequest
 import com.shefivan.aezaapp.domain.model.ServiceStatus
-import com.shefivan.aezaapp.domain.model.ServiceTask
-import com.shefivan.aezaapp.domain.model.ServiceTaskStatus
 import com.shefivan.aezaapp.domain.model.ServiceTerm
 import com.shefivan.aezaapp.domain.usecase.account.GetAccountUseCase
 import com.shefivan.aezaapp.domain.usecase.service.ChangeServicePasswordUseCase
@@ -116,14 +114,6 @@ class ServiceDetailViewModel @Inject constructor(
         val additionalIps: List<String>,
     )
 
-    data class TaskUiItem(
-        val id: String,
-        val name: String,
-        val createdDate: String,
-        val statusLabel: String,
-        val statusColor: Int,
-    )
-
     data class BackupUiItem(
         val id: Long,
         val name: String,
@@ -131,6 +121,16 @@ class ServiceDetailViewModel @Inject constructor(
         val createdDate: String,
         val statusLabel: String,
         val isActive: Boolean,
+    )
+
+    data class TransactionUiItem(
+        val id: String,
+        val typeLabel: String,
+        val amountLabel: String,
+        val bonusLabel: String?,
+        val date: String,
+        val isCredit: Boolean,
+        val statusLabel: String,
     )
 
     data class UiState(
@@ -174,7 +174,7 @@ class ServiceDetailViewModel @Inject constructor(
         // History
         val isHistoryLoading: Boolean = false,
         val isHistoryRefreshing: Boolean = false,
-        val tasks: List<TaskUiItem> = emptyList(),
+        val transactions: List<TransactionUiItem> = emptyList(),
 
         // VNC
         val canVnc: Boolean = false,
@@ -421,7 +421,7 @@ class ServiceDetailViewModel @Inject constructor(
             }
             // History
             is Command.LoadHistoryIfNeeded -> {
-                if (_uiState.value.tasks.isEmpty() && !_uiState.value.isHistoryLoading) {
+                if (_uiState.value.transactions.isEmpty() && !_uiState.value.isHistoryLoading) {
                     _uiState.update { it.copy(isHistoryLoading = true) }
                     viewModelScope.launch { loadHistory() }
                 }
@@ -520,7 +520,7 @@ class ServiceDetailViewModel @Inject constructor(
             it.copy(
                 isHistoryLoading = false,
                 isHistoryRefreshing = false,
-                tasks = page?.items?.map { t -> t.toTaskUiItem(currencySymbol) } ?: emptyList(),
+                transactions = page?.items?.map { t -> t.toTransactionUiItem(currencySymbol) } ?: emptyList(),
             )
         }
     }
@@ -564,7 +564,6 @@ class ServiceDetailViewModel @Inject constructor(
             .filter { (_, v) -> v != null }
             .map { (k, v) -> k to v.toString() },
         currentTaskName = currentTask?.name,
-        currentTaskStatus = currentTask?.status?.toLabel(),
         canRestart = ServiceCapability.RESTART in capabilities,
         canSuspend = ServiceCapability.CONTROL in capabilities && status == ServiceStatus.ACTIVE,
         canResume = ServiceCapability.CONTROL in capabilities && status == ServiceStatus.SUSPENDED,
@@ -603,19 +602,6 @@ class ServiceDetailViewModel @Inject constructor(
         prefix = prefix,
         gateway = gateway,
         additionalIps = ips,
-    )
-
-    private fun ServiceTask.toUiItem() = TaskUiItem(
-        id = id,
-        name = name,
-        createdDate = taskDateFormatter.format(createdAt),
-        statusLabel = status.toLabel(),
-        statusColor = when (status) {
-            ServiceTaskStatus.SUCCESS -> 1
-            ServiceTaskStatus.FAILED -> 2
-            ServiceTaskStatus.RUNNING -> 3
-            else -> 0
-        },
     )
 
     private fun ServiceBackup.toUiItem() = BackupUiItem(
@@ -664,17 +650,6 @@ class ServiceDetailViewModel @Inject constructor(
             ServiceStatus.UNKNOWN -> "неизвестно"
         }
 
-        private fun ServiceTaskStatus.toLabel() = when (this) {
-            ServiceTaskStatus.QUEUED -> "в очереди"
-            ServiceTaskStatus.RUNNING -> "выполняется"
-            ServiceTaskStatus.FAILED -> "ошибка"
-            ServiceTaskStatus.SUCCESS -> "выполнено"
-            ServiceTaskStatus.CANCELLED -> "отменено"
-            ServiceTaskStatus.WAIT_CHILD -> "ожидание"
-            ServiceTaskStatus.MANUAL -> "вручную"
-            ServiceTaskStatus.UNKNOWN -> "неизвестно"
-        }
-
         private fun ServiceBackupStatus.toLabel() = when (this) {
             ServiceBackupStatus.CREATING -> "создаётся"
             ServiceBackupStatus.ACTIVE -> "готов"
@@ -682,18 +657,27 @@ class ServiceDetailViewModel @Inject constructor(
             ServiceBackupStatus.UNKNOWN -> "неизвестно"
         }
 
-        private fun ServiceTransaction.toTaskUiItem(symbol: String): TaskUiItem {
+        private fun ServiceTransaction.toTransactionUiItem(symbol: String): TransactionUiItem {
             val displayDate = (performedAt ?: createdAt).let { taskDateFormatter.format(it) }
             val absValue = java.math.BigDecimal(amount).abs()
                 .divide(java.math.BigDecimal(100))
                 .setScale(2, java.math.RoundingMode.HALF_UP)
-            val amountLabel = if (amount < 0) "−$symbol $absValue" else "+$symbol $absValue"
-            return TaskUiItem(
+            val isCredit = amount >= 0
+            val amountLabel = if (isCredit) "+$symbol $absValue" else "−$symbol $absValue"
+            val bonusLabel = if (bonusAmount != 0L) {
+                val absBonus = java.math.BigDecimal(bonusAmount).abs()
+                    .divide(java.math.BigDecimal(100))
+                    .setScale(2, java.math.RoundingMode.HALF_UP)
+                if (bonusAmount >= 0) "+бонус $absBonus" else "−бонус $absBonus"
+            } else null
+            return TransactionUiItem(
                 id = id.toString(),
-                name = type.toTransactionTypeLabel(),
-                createdDate = displayDate,
-                statusLabel = amountLabel,
-                statusColor = if (amount >= 0) 1 else 0,
+                typeLabel = type.toTransactionTypeLabel(),
+                amountLabel = amountLabel,
+                bonusLabel = bonusLabel,
+                date = displayDate,
+                isCredit = isCredit,
+                statusLabel = status.toTransactionStatusLabel(),
             )
         }
 
@@ -705,6 +689,15 @@ class ServiceDetailViewModel @Inject constructor(
             "bonus" -> "Бонус"
             "penalty" -> "Штраф"
             else -> this.replaceFirstChar { it.uppercaseChar() }
+        }
+
+        private fun String.toTransactionStatusLabel() = when (this) {
+            "performed" -> "выполнено"
+            "completed" -> "выполнено"
+            "pending" -> "в обработке"
+            "failed" -> "ошибка"
+            "cancelled" -> "отменено"
+            else -> this
         }
     }
 }

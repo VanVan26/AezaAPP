@@ -29,10 +29,10 @@ class DomainRepositoryImpl @Inject constructor(
 
     override suspend fun getDomain(id: Long): Domain = api.getDomain(id).toDomain()
 
-    override suspend fun getExpectedNameservers(): List<String> = api.getExpectedNameservers()
+    override suspend fun getExpectedNameservers(): List<String> = api.getExpectedNameservers().items
 
     override suspend fun getRecordTypes(): List<DomainRecordType> =
-        api.getRecordTypes().map { it.toDomain() }
+        api.getRecordTypes().items.map { it.toDomain() }
 
     override suspend fun getRecords(domainId: Long, query: PageQuery): Page<DomainRecord> =
         api.getDomainRecords(

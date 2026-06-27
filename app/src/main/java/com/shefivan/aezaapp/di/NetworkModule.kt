@@ -8,6 +8,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import java.util.concurrent.TimeUnit
+import javax.inject.Named
 import javax.inject.Singleton
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -32,6 +33,15 @@ object NetworkModule {
         apiKeyInterceptor: ApiKeyInterceptor,
     ): OkHttpClient = OkHttpClient.Builder()
         .addInterceptor(apiKeyInterceptor)
+        .connectTimeout(NETWORK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        .readTimeout(NETWORK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        .writeTimeout(NETWORK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        .build()
+
+    @Provides
+    @Singleton
+    @Named("raw")
+    fun provideRawOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(NETWORK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .readTimeout(NETWORK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .writeTimeout(NETWORK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
