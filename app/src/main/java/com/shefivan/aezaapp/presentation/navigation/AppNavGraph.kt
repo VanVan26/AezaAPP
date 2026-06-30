@@ -2,6 +2,7 @@ package com.shefivan.aezaapp.presentation.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -13,13 +14,26 @@ import com.shefivan.aezaapp.presentation.notifications.NotificationsScreen
 import com.shefivan.aezaapp.presentation.servicedetail.ServiceDetailScreen
 import com.shefivan.aezaapp.presentation.services.ServicesScreen
 import com.shefivan.aezaapp.presentation.sshkeys.SshKeysScreen
+import com.shefivan.aezaapp.presentation.stock.StockWatchScreen
 import com.shefivan.aezaapp.presentation.support.SupportScreen
 
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
     modifier: Modifier = Modifier,
+    onOpenDrawer: () -> Unit = {},
 ) {
+    fun settled(): Boolean =
+        navController.currentBackStackEntry?.lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) == true
+
+    fun goBack() {
+        if (settled()) navController.popBackStack()
+    }
+
+    fun navigate(screen: Screen) {
+        if (settled()) navController.navigate(screen)
+    }
+
     NavHost(
         navController = navController,
         startDestination = Screen.Auth,
@@ -28,91 +42,60 @@ fun AppNavGraph(
         composable<Screen.Auth> {
             AuthScreen(
                 onNavigateToHome = {
-                    navController.navigate(Screen.Home) {
-                        popUpTo(Screen.Auth) { inclusive = true }
+                    if (settled()) {
+                        navController.navigate(Screen.Home) {
+                            popUpTo(Screen.Auth) { inclusive = true }
+                        }
                     }
                 }
             )
         }
         composable<Screen.Home> {
             HomeScreen(
-                onServiceClick = { serviceId ->
-                    navController.navigate(Screen.ServiceDetail(serviceId))
-                },
-                onNavigateServices = {
-                    navController.navigate(Screen.Services)
-                },
-                onNavigateSupport = {
-                    navController.navigate(Screen.Support)
-                },
-                onNavigateAccount = {
-                    navController.navigate(Screen.Account)
-                },
-                onNavigateNotifications = {
-                    navController.navigate(Screen.Notifications)
-                },
-                onNavigateSshKeys = {
-                    navController.navigate(Screen.SshKeys)
-                },
-                onNavigateDomains = {
-                    navController.navigate(Screen.Domains)
-                },
+                onServiceClick = { serviceId -> navigate(Screen.ServiceDetail(serviceId)) },
+                onNavigateAccount = { navigate(Screen.Account) },
+                onNavigateNotifications = { navigate(Screen.Notifications) },
+                onOpenDrawer = onOpenDrawer,
             )
         }
         composable<Screen.Services> {
             ServicesScreen(
-                onNavigateToDetail = { serviceId ->
-                    navController.navigate(Screen.ServiceDetail(serviceId))
-                },
-                onBack = { navController.popBackStack() },
-                onNavigateHome = {
-                    navController.navigate(Screen.Home) {
-                        popUpTo(Screen.Home) { inclusive = false }
-                    }
-                },
-                onNavigateSupport = {
-                    navController.navigate(Screen.Support)
-                },
-                onNavigateAccount = {
-                    navController.navigate(Screen.Account)
-                },
-                onNavigateNotifications = {
-                    navController.navigate(Screen.Notifications)
-                },
-                onNavigateSshKeys = {
-                    navController.navigate(Screen.SshKeys)
-                },
-                onNavigateDomains = {
-                    navController.navigate(Screen.Domains)
-                },
+                onNavigateToDetail = { serviceId -> navigate(Screen.ServiceDetail(serviceId)) },
+                onBack = { goBack() },
+                onOpenDrawer = onOpenDrawer,
             )
         }
         composable<Screen.ServiceDetail> {
             ServiceDetailScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { goBack() },
             )
         }
         composable<Screen.Account> {
             AccountScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { goBack() },
                 onNavigateToAuth = {
-                    navController.navigate(Screen.Auth) {
-                        popUpTo(0) { inclusive = true }
+                    if (settled()) {
+                        navController.navigate(Screen.Auth) {
+                            popUpTo(0) { inclusive = true }
+                        }
                     }
                 },
             )
         }
         composable<Screen.Notifications> {
-            NotificationsScreen(onBack = { navController.popBackStack() })
+            NotificationsScreen(onBack = { goBack() })
         }
         composable<Screen.SshKeys> {
-            SshKeysScreen(onBack = { navController.popBackStack() })
+            SshKeysScreen(onBack = { goBack() })
         }
         composable<Screen.Domains> {
-            DomainsScreen(onBack = { navController.popBackStack() })
+            DomainsScreen(onBack = { goBack() })
         }
         composable<Screen.Support> {
-            SupportScreen(onBack = { navController.popBackStack() })
+            SupportScreen(onBack = { goBack() })
+        }
+        composable<Screen.StockWatch> {
+            StockWatchScreen(onBack = { goBack() })
         }
     }
 }

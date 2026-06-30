@@ -34,4 +34,3 @@ internal fun EditSshKeyInput.toDto(): EditSshKeyRequestDto = EditSshKeyRequestDt
     publicKey = publicKey,
     autoAssign = autoAssign,
 )
-

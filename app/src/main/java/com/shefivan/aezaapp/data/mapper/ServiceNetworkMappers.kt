@@ -33,4 +33,3 @@ private fun Ipv6ResponseDto.toDomain(): Ipv6Address = Ipv6Address(
     gateway = gateway,
     ips = ips,
 )
-

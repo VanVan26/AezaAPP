@@ -10,4 +10,3 @@ interface FileRepository {
 
     suspend fun saveUploadedFile(key: String, fileName: String): FileAsset
 }
-

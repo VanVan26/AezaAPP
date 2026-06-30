@@ -12,8 +12,9 @@ import javax.inject.Singleton
 @Singleton
 class AppErrorEmitterImpl @Inject constructor() : AppErrorEmitter {
     private val _errors = MutableSharedFlow<AppError>(
-        extraBufferCapacity = 16,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        replay = 1,
+        extraBufferCapacity = 15,
+        onBufferOverflow = BufferOverflow.DROP_LATEST,
     )
     override val errors: SharedFlow<AppError> = _errors.asSharedFlow()
 

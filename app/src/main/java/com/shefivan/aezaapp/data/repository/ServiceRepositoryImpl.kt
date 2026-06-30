@@ -5,6 +5,7 @@ import com.shefivan.aezaapp.data.mapper.toDomain
 import com.shefivan.aezaapp.data.mapper.toDto
 import com.shefivan.aezaapp.domain.model.ServiceTransaction
 import com.shefivan.aezaapp.data.remote.api.AezaApiService
+import com.shefivan.aezaapp.data.remote.dto.EditServiceRequestDto
 import com.shefivan.aezaapp.data.remote.dto.ServiceSuspendRequestDto
 import com.shefivan.aezaapp.domain.model.Page
 import com.shefivan.aezaapp.domain.model.PageQuery
@@ -30,6 +31,10 @@ class ServiceRepositoryImpl @Inject constructor(
 
     override suspend fun requestDeletion(id: Long) {
         api.requestServiceDeletion(id)
+    }
+
+    override suspend fun setAutoProlong(id: Long, enabled: Boolean) {
+        api.editService(id, EditServiceRequestDto(autoProlong = enabled))
     }
 
     override suspend fun resume(id: Long) {

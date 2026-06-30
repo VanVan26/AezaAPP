@@ -15,4 +15,3 @@ data class Ipv6Address(
     val gateway: String,
     val ips: List<String>,
 )
-

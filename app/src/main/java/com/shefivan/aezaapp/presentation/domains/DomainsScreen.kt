@@ -25,17 +25,16 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
+import com.shefivan.aezaapp.presentation.ui.components.AezaDialog
+import com.shefivan.aezaapp.presentation.ui.components.AezaTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -477,30 +476,21 @@ private fun AddDomainDialog(
     onConfirm: (String) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Добавить домен") },
-        text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Имя домена") },
-                placeholder = { Text("example.com") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = { if (name.isNotBlank()) onConfirm(name.trim()) }, enabled = !isCreating) {
-                if (isCreating) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = TextPrimary)
-                } else {
-                    Text("Добавить")
-                }
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
-    )
+    AezaDialog(
+        title = "Добавить домен",
+        onDismiss = onDismiss,
+        confirmText = "Добавить",
+        confirmEnabled = name.isNotBlank(),
+        confirmLoading = isCreating,
+        onConfirm = { onConfirm(name.trim()) },
+    ) {
+        AezaTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = "Имя домена",
+            placeholder = "example.com",
+        )
+    }
 }
 
 @Composable
@@ -515,59 +505,35 @@ private fun AddRecordDialog(
     var content by remember { mutableStateOf("") }
     var ttl by remember { mutableStateOf("3600") }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Добавить DNS-запись") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(
-                    value = type,
-                    onValueChange = { type = it.uppercase() },
-                    label = { Text("Тип (A, AAAA, CNAME, MX…)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Имя") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = content,
-                    onValueChange = { content = it },
-                    label = { Text("Значение") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = ttl,
-                    onValueChange = { ttl = it.filter { c -> c.isDigit() } },
-                    label = { Text("TTL (сек.)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    if (type.isNotBlank() && name.isNotBlank() && content.isNotBlank()) {
-                        onConfirm(type, name, content, ttl.toIntOrNull() ?: 3600)
-                    }
-                },
-                enabled = !isCreating,
-            ) {
-                if (isCreating) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = TextPrimary)
-                } else {
-                    Text("Добавить")
-                }
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
-    )
+    AezaDialog(
+        title = "Добавить DNS-запись",
+        onDismiss = onDismiss,
+        confirmText = "Добавить",
+        confirmEnabled = type.isNotBlank() && name.isNotBlank() && content.isNotBlank(),
+        confirmLoading = isCreating,
+        onConfirm = { onConfirm(type, name, content, ttl.toIntOrNull() ?: 3600) },
+    ) {
+        AezaTextField(
+            value = type,
+            onValueChange = { type = it.uppercase() },
+            label = "Тип (A, AAAA, CNAME, MX…)",
+        )
+        AezaTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = "Имя",
+        )
+        AezaTextField(
+            value = content,
+            onValueChange = { content = it },
+            label = "Значение",
+        )
+        AezaTextField(
+            value = ttl,
+            onValueChange = { ttl = it.filter { c -> c.isDigit() } },
+            label = "TTL (сек.)",
+        )
+    }
 }
 
 @Composable
@@ -581,54 +547,38 @@ private fun EditRecordDialog(
     var ttl by remember(record.id) { mutableStateOf(record.ttl.toString()) }
     var isEnabled by remember(record.id) { mutableStateOf(record.isEnabled) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Редактировать ${record.type}-запись") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(
-                    value = content,
-                    onValueChange = { content = it },
-                    label = { Text("Значение") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = ttl,
-                    onValueChange = { ttl = it.filter { c -> c.isDigit() } },
-                    label = { Text("TTL (сек.)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("Активна", fontSize = 14.sp, color = TextPrimary)
-                    Switch(
-                        checked = isEnabled,
-                        onCheckedChange = { isEnabled = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = AccentGreen,
-                        ),
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { if (content.isNotBlank()) onConfirm(content.trim(), ttl.toIntOrNull() ?: 3600, isEnabled) },
-                enabled = !isEditing,
-            ) {
-                if (isEditing) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = TextPrimary)
-                } else {
-                    Text("Сохранить")
-                }
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
-    )
+    AezaDialog(
+        title = "Редактировать ${record.type}-запись",
+        onDismiss = onDismiss,
+        confirmText = "Сохранить",
+        confirmEnabled = content.isNotBlank(),
+        confirmLoading = isEditing,
+        onConfirm = { onConfirm(content.trim(), ttl.toIntOrNull() ?: 3600, isEnabled) },
+    ) {
+        AezaTextField(
+            value = content,
+            onValueChange = { content = it },
+            label = "Значение",
+        )
+        AezaTextField(
+            value = ttl,
+            onValueChange = { ttl = it.filter { c -> c.isDigit() } },
+            label = "TTL (сек.)",
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Активна", fontSize = 14.sp, color = TextPrimary)
+            Switch(
+                checked = isEnabled,
+                onCheckedChange = { isEnabled = it },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = AccentGreen,
+                ),
+            )
+        }
+    }
 }

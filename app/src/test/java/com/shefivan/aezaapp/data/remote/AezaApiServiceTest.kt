@@ -195,4 +195,3 @@ class AezaApiServiceTest {
         override fun get(): String? = apiKey
     }
 }
-

@@ -1,5 +1,6 @@
 package com.shefivan.aezaapp.domain.error
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -12,6 +13,8 @@ import java.net.UnknownHostException
 
 suspend fun <T> AppErrorEmitter.safeApiCall(block: suspend () -> T): T? = try {
     block()
+} catch (e: CancellationException) {
+    throw e
 } catch (e: HttpException) {
     val message = parseHttpErrorBody(e) ?: httpCodeToRussian(e.code())
     emit(AppError.HttpError(code = e.code(), message = message))

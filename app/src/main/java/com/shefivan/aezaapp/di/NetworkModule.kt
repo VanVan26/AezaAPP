@@ -65,4 +65,3 @@ object NetworkModule {
     private const val NETWORK_TIMEOUT_SECONDS = 30L
     private const val JSON_MEDIA_TYPE = "application/json"
 }
-

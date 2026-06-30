@@ -30,4 +30,3 @@ interface SupportRepository {
 
     suspend fun rateTicket(ticketId: Long, input: TicketRateInput): TicketRate
 }
-

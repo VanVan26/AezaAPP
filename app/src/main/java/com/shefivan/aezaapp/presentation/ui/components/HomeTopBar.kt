@@ -84,7 +84,6 @@ fun HomeTopBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Left section: initials + bell
             Row(
                 modifier = Modifier
                     .weight(0.5f)
@@ -131,7 +130,6 @@ fun HomeTopBar(
                 }
             }
 
-            // Right section: balance + top-up
             Row(
                 modifier = Modifier
                     .weight(1f)

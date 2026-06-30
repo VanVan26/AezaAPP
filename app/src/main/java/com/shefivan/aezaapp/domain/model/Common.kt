@@ -13,4 +13,3 @@ data class PageQuery(
     val sort: String? = null,
     val filter: String? = null,
 )
-

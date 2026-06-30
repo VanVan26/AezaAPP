@@ -16,4 +16,3 @@ internal fun NotificationResponseDto.toDomain(): Notification = Notification(
     isRead = isRead,
     createdAt = createdAt.toInstantOrEpoch(),
 )
-

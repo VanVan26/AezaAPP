@@ -36,4 +36,3 @@ data class Ipv6ResponseDto(
 data class ServicesNetworksEditPtrRequestDto(
     val domain: String,
 )
-

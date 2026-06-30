@@ -10,6 +10,7 @@ import com.shefivan.aezaapp.domain.usecase.auth.ClearApiKeyUseCase
 import com.shefivan.aezaapp.domain.usecase.system.GetHealthUseCase
 import com.shefivan.aezaapp.domain.usecase.system.GetSystemAlertsUseCase
 import com.shefivan.aezaapp.domain.usecase.system.GetVersionUseCase
+import com.shefivan.aezaapp.notification.BackgroundSyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +30,7 @@ class AccountViewModel @Inject constructor(
     private val getHealth: GetHealthUseCase,
     private val getVersion: GetVersionUseCase,
     private val getSystemAlerts: GetSystemAlertsUseCase,
+    private val backgroundSync: BackgroundSyncManager,
 ) : ViewModel() {
 
     data class SystemAlertUiItem(
@@ -90,6 +92,7 @@ class AccountViewModel @Inject constructor(
                 loadSystemStatus()
             }
             is Command.Logout -> viewModelScope.launch {
+                backgroundSync.stop()
                 clearApiKey()
                 _events.send(UiEvent.NavigateToAuth)
             }

@@ -8,7 +8,9 @@ import com.shefivan.aezaapp.domain.model.ServiceTerm
 import com.shefivan.aezaapp.domain.usecase.account.GetAccountUseCase
 import com.shefivan.aezaapp.domain.usecase.service.GetServicesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -63,6 +65,8 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
+    private var loadJob: Job? = null
+
     val productTiles = listOf(
         ProductTile("Виртуальный сервер", "Мощные процессоры и NVMe SSD", "/order/vps"),
         ProductTile("Hi-CPU сервер", "Высокопроизводительные процессоры для требовательных задач", "/order/hicpu"),
@@ -73,13 +77,14 @@ class HomeViewModel @Inject constructor(
     )
 
     init {
-        viewModelScope.launch { loadData() }
+        loadJob = viewModelScope.launch { loadData() }
     }
 
     fun processCommand(command: Command) {
         when (command) {
             is Command.Refresh -> {
-                viewModelScope.launch {
+                loadJob?.cancel()
+                loadJob = viewModelScope.launch {
                     _uiState.update { it.copy(isRefreshing = true) }
                     loadData()
                 }
@@ -88,31 +93,37 @@ class HomeViewModel @Inject constructor(
     }
 
     private suspend fun loadData() {
-        val accountDeferred = viewModelScope.async { getAccount() }
-        val servicesDeferred = viewModelScope.async { getServices() }
+        try {
+            coroutineScope {
+                val accountDeferred = async { getAccount() }
+                val servicesDeferred = async { getServices() }
 
-        var currencySymbol = "€"
-        var userInitials = _uiState.value.userInitials
-        var balance = _uiState.value.balance
+                var currencySymbol = "€"
+                var userInitials = _uiState.value.userInitials
+                var balance = _uiState.value.balance
 
-        val account = accountDeferred.await()
-        if (account != null) {
-            currencySymbol = currencySymbols[account.currency.uppercase()] ?: account.currency.uppercase()
-            val total = (account.balance + account.bonusBalance).divide(BigDecimal(100))
-            userInitials = account.email.substringBefore("@").take(2).uppercase()
-            balance = "$currencySymbol ${total.setScale(2, RoundingMode.HALF_UP)}"
-        }
+                val account = accountDeferred.await()
+                if (account != null) {
+                    currencySymbol = currencySymbols[account.currency.uppercase()] ?: account.currency.uppercase()
+                    val total = (account.balance + account.bonusBalance).divide(BigDecimal(100))
+                    userInitials = account.email.substringBefore("@").take(2).uppercase()
+                    balance = "$currencySymbol ${total.setScale(2, RoundingMode.HALF_UP)}"
+                }
 
-        val page = servicesDeferred.await()
-        _uiState.update {
-            it.copy(
-                isLoading = false,
-                isRefreshing = false,
-                servicesLoading = false,
-                userInitials = userInitials,
-                balance = balance,
-                services = page?.items?.map { s -> s.toUiItem(currencySymbol) } ?: emptyList(),
-            )
+                val page = servicesDeferred.await()
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isRefreshing = false,
+                        servicesLoading = false,
+                        userInitials = userInitials,
+                        balance = balance,
+                        services = page?.items?.map { s -> s.toUiItem(currencySymbol) } ?: emptyList(),
+                    )
+                }
+            }
+        } catch (_: Exception) {
+            _uiState.update { it.copy(isLoading = false, isRefreshing = false, servicesLoading = false) }
         }
     }
 

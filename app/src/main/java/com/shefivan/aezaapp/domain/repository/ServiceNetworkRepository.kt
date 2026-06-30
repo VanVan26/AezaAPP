@@ -13,4 +13,3 @@ interface ServiceNetworkRepository {
 
     suspend fun makeMainIpv4(serviceId: Long, externalId: String)
 }
-

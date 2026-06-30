@@ -8,11 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.rememberDrawerState
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,8 +21,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,35 +47,14 @@ private val TitleColor = Color(0x80868686)
 @Composable
 fun HomeScreen(
     onServiceClick: (Long) -> Unit = {},
-    onNavigateServices: () -> Unit = {},
-    onNavigateSupport: () -> Unit = {},
     onNavigateAccount: () -> Unit = {},
     onNavigateNotifications: () -> Unit = {},
-    onNavigateSshKeys: () -> Unit = {},
-    onNavigateDomains: () -> Unit = {},
+    onOpenDrawer: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            AppDrawer(
-                currentRoute = "home",
-                onClose = { scope.launch { drawerState.close() } },
-                onNavigateHome = {},
-                onNavigateServices = onNavigateServices,
-                onNavigateSupport = onNavigateSupport,
-                onNavigateAccount = onNavigateAccount,
-                onNavigateNotifications = onNavigateNotifications,
-                onNavigateSshKeys = onNavigateSshKeys,
-                onNavigateDomains = onNavigateDomains,
-            )
-        },
-    ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -89,7 +63,7 @@ fun HomeScreen(
         HomeTopBar(
             userInitials = uiState.userInitials,
             balance = uiState.balance,
-            onMenuClick = { scope.launch { drawerState.open() } },
+            onMenuClick = onOpenDrawer,
             onUserClick = onNavigateAccount,
             onBellClick = onNavigateNotifications,
             onTopUpClick = {},
@@ -193,7 +167,6 @@ fun HomeScreen(
             }
         }
     }
-    } // ModalNavigationDrawer
 }
 
 @Composable

@@ -12,4 +12,5 @@ sealed interface Screen {
     @Serializable data object SshKeys : Screen
     @Serializable data object Domains : Screen
     @Serializable data object Support : Screen
+    @Serializable data object StockWatch : Screen
 }

@@ -10,4 +10,3 @@ data class SystemAlert(
     val metadata: DynamicMap?,
     val createdAt: Instant,
 )
-

@@ -8,4 +8,3 @@ data class Notification(
     val isRead: Boolean,
     val createdAt: Instant,
 )
-

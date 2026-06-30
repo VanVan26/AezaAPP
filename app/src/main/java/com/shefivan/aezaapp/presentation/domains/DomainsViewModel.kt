@@ -66,7 +66,6 @@ class DomainsViewModel @Inject constructor(
         val showAddDomainDialog: Boolean = false,
         val isCreatingDomain: Boolean = false,
 
-        // Detail
         val selectedDomain: DomainUiItem? = null,
         val isRecordsLoading: Boolean = false,
         val isRecordsRefreshing: Boolean = false,
@@ -77,12 +76,10 @@ class DomainsViewModel @Inject constructor(
         val recordTypes: List<String> = emptyList(),
         val expectedNameservers: List<String> = emptyList(),
 
-        // Domain expand
         val expandedDomainIds: Set<Long> = emptySet(),
         val domainDetails: Map<Long, DomainDetailUiItem> = emptyMap(),
         val loadingDomainDetailIds: Set<Long> = emptySet(),
 
-        // Edit record
         val editingRecord: RecordUiItem? = null,
         val isEditingRecord: Boolean = false,
     )

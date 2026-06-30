@@ -26,17 +26,13 @@ import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,9 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.shefivan.aezaapp.presentation.home.AppDrawer
 import com.shefivan.aezaapp.presentation.theme.NotoColorEmojiFamily
-import kotlinx.coroutines.launch
 
 private val Background = Color(0xFFF4F4F4)
 private val BorderColor = Color(0xFFE1E1E1)
@@ -63,84 +57,60 @@ private val CardShape = RoundedCornerShape(16.dp)
 fun ServicesScreen(
     onNavigateToDetail: (Long) -> Unit,
     onBack: () -> Unit = {},
-    onNavigateHome: () -> Unit = {},
-    onNavigateSupport: () -> Unit = {},
-    onNavigateAccount: () -> Unit = {},
-    onNavigateNotifications: () -> Unit = {},
-    onNavigateSshKeys: () -> Unit = {},
-    onNavigateDomains: () -> Unit = {},
+    onOpenDrawer: () -> Unit = {},
     viewModel: ServicesViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            AppDrawer(
-                currentRoute = "services",
-                onClose = { scope.launch { drawerState.close() } },
-                onNavigateHome = onNavigateHome,
-                onNavigateServices = {},
-                onNavigateSupport = onNavigateSupport,
-                onNavigateAccount = onNavigateAccount,
-                onNavigateNotifications = onNavigateNotifications,
-                onNavigateSshKeys = onNavigateSshKeys,
-                onNavigateDomains = onNavigateDomains,
-            )
-        },
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Background),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Background),
-        ) {
-            ServicesTopBar(
-                onBack = onBack,
-                onMenuClick = { scope.launch { drawerState.open() } },
-            )
-            HorizontalDivider(color = BorderColor)
+        ServicesTopBar(
+            onBack = onBack,
+            onMenuClick = onOpenDrawer,
+        )
+        HorizontalDivider(color = BorderColor)
 
-            PullToRefreshBox(
-                isRefreshing = uiState.isRefreshing,
-                onRefresh = { if (!uiState.isLoading && !uiState.isRefreshing) viewModel.processCommand(ServicesViewModel.Command.Refresh) },
+        PullToRefreshBox(
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = { if (!uiState.isLoading && !uiState.isRefreshing) viewModel.processCommand(ServicesViewModel.Command.Refresh) },
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            LazyColumn(
                 modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp,
+                ),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    if (uiState.isLoading) {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillParentMaxSize()
-                                    .padding(bottom = 32.dp),
-                                contentAlignment = Alignment.Center,
-                            ) { CircularProgressIndicator(color = TextPrimary) }
+                if (uiState.isLoading) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillParentMaxSize()
+                                .padding(bottom = 32.dp),
+                            contentAlignment = Alignment.Center,
+                        ) { CircularProgressIndicator(color = TextPrimary) }
+                    }
+                } else if (uiState.services.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillParentMaxSize()
+                                .padding(bottom = 32.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(text = "Нет услуг", fontSize = 15.sp, color = TextSecondary)
                         }
-                    } else if (uiState.services.isEmpty()) {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillParentMaxSize()
-                                    .padding(bottom = 32.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(text = "Нет услуг", fontSize = 15.sp, color = TextSecondary)
-                            }
-                        }
-                    } else {
-                        items(uiState.services, key = { it.id }) { service ->
-                            ServiceDetailCard(
-                                item = service,
-                                onClick = { onNavigateToDetail(service.id) },
-                            )
-                        }
+                    }
+                } else {
+                    items(uiState.services, key = { it.id }) { service ->
+                        ServiceDetailCard(
+                            item = service,
+                            onClick = { onNavigateToDetail(service.id) },
+                        )
                     }
                 }
             }
@@ -202,7 +172,6 @@ private fun ServiceDetailCard(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        // Header: flag + name/type + status badge
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -246,10 +215,8 @@ private fun ServiceDetailCard(
 
         HorizontalDivider(color = BorderColor)
 
-        // Тариф
         DetailRow(label = "Тариф", value = item.planName)
 
-        // IP с кнопкой копирования
         if (item.ip.isNotBlank()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -282,7 +249,6 @@ private fun ServiceDetailCard(
             }
         }
 
-        // Цена
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -305,7 +271,6 @@ private fun ServiceDetailCard(
             }
         }
 
-        // Действует до
         DetailRow(label = "Действует до", value = item.expiresDate)
     }
 }

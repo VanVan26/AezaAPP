@@ -15,6 +15,7 @@ import com.shefivan.aezaapp.data.remote.dto.DomainRecordResponseDto
 import com.shefivan.aezaapp.data.remote.dto.DomainRecordTypeListResponseDto
 import com.shefivan.aezaapp.data.remote.dto.DomainResponseDto
 import com.shefivan.aezaapp.data.remote.dto.EditDomainRecordRequestDto
+import com.shefivan.aezaapp.data.remote.dto.EditServiceRequestDto
 import com.shefivan.aezaapp.data.remote.dto.EditSshKeyRequestDto
 import com.shefivan.aezaapp.data.remote.dto.FileAssetResponseDto
 import com.shefivan.aezaapp.data.remote.dto.FileUploadLinkResponseDto
@@ -22,6 +23,7 @@ import com.shefivan.aezaapp.data.remote.dto.Ipv4ListResponseDto
 import com.shefivan.aezaapp.data.remote.dto.Ipv6ListResponseDto
 import com.shefivan.aezaapp.data.remote.dto.NotificationListResponseDto
 import com.shefivan.aezaapp.data.remote.dto.NotificationResponseDto
+import com.shefivan.aezaapp.data.remote.dto.ProductsResponseDto
 import com.shefivan.aezaapp.data.remote.dto.ReinstallServiceRequestDto
 import com.shefivan.aezaapp.data.remote.dto.RemoteVncResponseDto
 import com.shefivan.aezaapp.data.remote.dto.SaveUploadedFileRequestDto
@@ -75,11 +77,23 @@ interface AezaApiService {
         @Query("filter") filter: String?,
     ): ServicesListResponseDto
 
+    @GET("services/products")
+    suspend fun getProducts(
+        @Query("type") type: String?,
+        @Query("group") group: Long?,
+    ): ProductsResponseDto
+
     @GET("services/{id}")
     suspend fun getService(@Path("id") id: Long): ServiceResponseDto
 
     @DELETE("services/{id}")
     suspend fun requestServiceDeletion(@Path("id") id: Long)
+
+    @PATCH("services/{id}")
+    suspend fun editService(
+        @Path("id") id: Long,
+        @Body body: EditServiceRequestDto,
+    )
 
     @POST("services/{id}/ctl/resume")
     suspend fun resumeService(@Path("id") id: Long)
@@ -218,7 +232,6 @@ interface AezaApiService {
     @DELETE("services/{serviceId}/backups/schedule")
     suspend fun deleteServiceBackupSchedule(@Path("serviceId") serviceId: Long)
 
-    // Domain
     @GET("domains")
     suspend fun getDomains(
         @Query("offset") offset: Int?,
@@ -267,14 +280,12 @@ interface AezaApiService {
         @Path("recordId") recordId: Long,
     )
 
-    // File
     @POST("files")
     suspend fun createFileUploadLink(@Body body: CreateFileUploadLinkRequestDto): FileUploadLinkResponseDto
 
     @POST("files/save")
     suspend fun saveUploadedFile(@Body body: SaveUploadedFileRequestDto): FileAssetResponseDto
 
-    // Support
     @GET("support/tickets")
     suspend fun getSupportTickets(): SupportTicketsResponseDto
 
@@ -319,7 +330,6 @@ interface AezaApiService {
         @Body body: TicketRateRequestDto,
     ): TicketRateResponseDto
 
-    // Billing
     @GET("billing/transactions")
     suspend fun getServiceTransactions(
         @Query("sort") sort: String?,

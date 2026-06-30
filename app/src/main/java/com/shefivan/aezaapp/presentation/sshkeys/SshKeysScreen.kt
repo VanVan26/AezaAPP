@@ -23,17 +23,16 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
+import com.shefivan.aezaapp.presentation.ui.components.AezaDialog
+import com.shefivan.aezaapp.presentation.ui.components.AezaTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -291,59 +290,43 @@ private fun AddSshKeyDialog(
     var publicKey by remember { mutableStateOf("") }
     var autoAssign by remember { mutableStateOf(false) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Добавить SSH-ключ") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Название") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = publicKey,
-                    onValueChange = { publicKey = it },
-                    label = { Text("Публичный ключ") },
-                    minLines = 3,
-                    maxLines = 5,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("Автоназначение", fontSize = 14.sp, color = TextPrimary)
-                    Switch(
-                        checked = autoAssign,
-                        onCheckedChange = { autoAssign = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = AccentGreen,
-                        ),
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    if (name.isNotBlank() && publicKey.isNotBlank()) onConfirm(name, publicKey.trim(), autoAssign)
-                },
-                enabled = !isCreating,
-            ) {
-                if (isCreating) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = TextPrimary)
-                } else {
-                    Text("Добавить")
-                }
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
-    )
+    AezaDialog(
+        title = "Добавить SSH-ключ",
+        onDismiss = onDismiss,
+        confirmText = "Добавить",
+        confirmEnabled = name.isNotBlank() && publicKey.isNotBlank(),
+        confirmLoading = isCreating,
+        onConfirm = { onConfirm(name.trim(), publicKey.trim(), autoAssign) },
+    ) {
+        AezaTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = "Название",
+        )
+        AezaTextField(
+            value = publicKey,
+            onValueChange = { publicKey = it },
+            label = "Публичный ключ",
+            singleLine = false,
+            minLines = 3,
+            maxLines = 5,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Автоназначение", fontSize = 14.sp, color = TextPrimary)
+            Switch(
+                checked = autoAssign,
+                onCheckedChange = { autoAssign = it },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = AccentGreen,
+                ),
+            )
+        }
+    }
 }
 
 @Composable
@@ -356,47 +339,33 @@ private fun EditSshKeyDialog(
     var name by remember(key.id) { mutableStateOf(key.name) }
     var autoAssign by remember(key.id) { mutableStateOf(key.autoAssign) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Редактировать SSH-ключ") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Название") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("Автоназначение", fontSize = 14.sp, color = TextPrimary)
-                    Switch(
-                        checked = autoAssign,
-                        onCheckedChange = { autoAssign = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = AccentGreen,
-                        ),
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { if (name.isNotBlank()) onConfirm(name.trim(), autoAssign) },
-                enabled = !isEditing,
-            ) {
-                if (isEditing) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = TextPrimary)
-                } else {
-                    Text("Сохранить")
-                }
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
-    )
+    AezaDialog(
+        title = "Редактировать SSH-ключ",
+        onDismiss = onDismiss,
+        confirmText = "Сохранить",
+        confirmEnabled = name.isNotBlank(),
+        confirmLoading = isEditing,
+        onConfirm = { onConfirm(name.trim(), autoAssign) },
+    ) {
+        AezaTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = "Название",
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Автоназначение", fontSize = 14.sp, color = TextPrimary)
+            Switch(
+                checked = autoAssign,
+                onCheckedChange = { autoAssign = it },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = AccentGreen,
+                ),
+            )
+        }
+    }
 }

@@ -29,6 +29,7 @@ import com.shefivan.aezaapp.domain.usecase.service.ReinstallServiceUseCase
 import com.shefivan.aezaapp.domain.usecase.service.RequestServiceDeletionUseCase
 import com.shefivan.aezaapp.domain.usecase.service.RestartServiceUseCase
 import com.shefivan.aezaapp.domain.usecase.service.ResumeServiceUseCase
+import com.shefivan.aezaapp.domain.usecase.service.SetAutoProlongUseCase
 import com.shefivan.aezaapp.domain.usecase.service.SuspendServiceUseCase
 import com.shefivan.aezaapp.domain.usecase.servicebackup.CreateServiceBackupUseCase
 import com.shefivan.aezaapp.domain.usecase.servicebackup.DeleteServiceBackupScheduleUseCase
@@ -44,6 +45,7 @@ import com.shefivan.aezaapp.presentation.navigation.Screen
 import com.shefivan.aezaapp.presentation.services.ServicesViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -55,7 +57,6 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
-
 
 enum class ServiceDetailTab(val label: String) {
     INFO("Информация"),
@@ -74,6 +75,7 @@ class ServiceDetailViewModel @Inject constructor(
     private val restartService: RestartServiceUseCase,
     private val suspendService: SuspendServiceUseCase,
     private val resumeService: ResumeServiceUseCase,
+    private val setAutoProlong: SetAutoProlongUseCase,
     private val changePasswordUseCase: ChangeServicePasswordUseCase,
     private val enterRescueUseCase: EnterRescueModeUseCase,
     private val leaveRescueUseCase: LeaveRescueModeUseCase,
@@ -134,12 +136,10 @@ class ServiceDetailViewModel @Inject constructor(
     )
 
     data class UiState(
-        // Service
         val isLoading: Boolean = true,
         val isRefreshing: Boolean = false,
         val isActionInProgress: Boolean = false,
 
-        // Информация
         val name: String = "",
         val flag: String = "",
         val typeLabel: String = "",
@@ -159,7 +159,6 @@ class ServiceDetailViewModel @Inject constructor(
         val currentTaskName: String? = null,
         val currentTaskStatus: String? = null,
 
-        // Capabilities / available tabs
         val availableTabs: List<ServiceDetailTab> = listOf(ServiceDetailTab.INFO),
         val canRestart: Boolean = false,
         val canSuspend: Boolean = false,
@@ -171,25 +170,21 @@ class ServiceDetailViewModel @Inject constructor(
         val canBackups: Boolean = false,
         val canCharts: Boolean = false,
 
-        // History
         val isHistoryLoading: Boolean = false,
         val isHistoryRefreshing: Boolean = false,
         val transactions: List<TransactionUiItem> = emptyList(),
 
-        // VNC
         val canVnc: Boolean = false,
         val isVncLoading: Boolean = false,
         val showVncDialog: Boolean = false,
         val vncAddress: String = "",
         val vncPassword: String = "",
 
-        // Stats
         val isStatsLoading: Boolean = false,
         val isStatsRefreshing: Boolean = false,
         val statsData: List<String> = emptyList(),
         val statsType: String = "cpu",
 
-        // Network / IP
         val isNetworkLoading: Boolean = false,
         val isNetworkRefreshing: Boolean = false,
         val ipv4List: List<Ipv4UiItem> = emptyList(),
@@ -197,7 +192,6 @@ class ServiceDetailViewModel @Inject constructor(
         val editingPtrKey: String? = null,
         val editingPtrDomain: String = "",
 
-        // Backups
         val isBackupsLoading: Boolean = false,
         val isBackupsRefreshing: Boolean = false,
         val backups: List<BackupUiItem> = emptyList(),
@@ -209,7 +203,6 @@ class ServiceDetailViewModel @Inject constructor(
         val backupScheduleWeekDay: Int? = null,
         val backupScheduleMonthDay: Int? = null,
 
-        // Dialogs
         val showChangePasswordDialog: Boolean = false,
         val showReinstallDialog: Boolean = false,
         val showDeleteConfirmDialog: Boolean = false,
@@ -218,35 +211,28 @@ class ServiceDetailViewModel @Inject constructor(
     )
 
     sealed interface Command {
-        // General
         data object Refresh : Command
-        // Power
         data object Restart : Command
         data object Suspend : Command
         data object Resume : Command
-        // Rescue
         data object EnterRescueMode : Command
         data object LeaveRescueMode : Command
-        // Change password
+        data class ToggleAutoProlong(val enabled: Boolean) : Command
         data object OpenChangePasswordDialog : Command
         data object DismissChangePasswordDialog : Command
         data class ConfirmChangePassword(val newPassword: String) : Command
-        // Reinstall
         data object OpenReinstallDialog : Command
         data object DismissReinstallDialog : Command
         data class ConfirmReinstall(val os: String, val recipe: String, val password: String) : Command
-        // Delete
         data object OpenDeleteConfirmDialog : Command
         data object DismissDeleteConfirmDialog : Command
         data object ConfirmDelete : Command
-        // Network
         data object LoadNetworkIfNeeded : Command
         data object RefreshNetwork : Command
         data class OpenEditPtrDialog(val key: String, val currentDomain: String) : Command
         data object DismissEditPtrDialog : Command
         data class ConfirmEditPtr(val domain: String) : Command
         data class MakeMainIp(val externalId: String) : Command
-        // Backups
         data object RefreshBackups : Command
         data object LoadBackupsIfNeeded : Command
         data object OpenCreateBackupDialog : Command
@@ -263,14 +249,11 @@ class ServiceDetailViewModel @Inject constructor(
             val monthDay: Int?,
         ) : Command
         data object DeleteSchedule : Command
-        // History
         data object LoadHistoryIfNeeded : Command
         data object RefreshHistory : Command
-        // Stats
         data object LoadStatsIfNeeded : Command
         data object RefreshStats : Command
         data class SelectStatType(val type: String) : Command
-        // VNC
         data object ConnectVnc : Command
         data object DismissVncDialog : Command
     }
@@ -284,19 +267,16 @@ class ServiceDetailViewModel @Inject constructor(
 
     fun processCommand(command: Command) {
         when (command) {
-            // General
             is Command.Refresh -> viewModelScope.launch {
                 _uiState.update { it.copy(isRefreshing = true) }
                 loadService()
             }
-            // Power
             is Command.Restart -> launchAction { restartService(serviceId) }
             is Command.Suspend -> launchAction { suspendService(serviceId) }
             is Command.Resume -> launchAction { resumeService(serviceId) }
-            // Rescue
             is Command.EnterRescueMode -> launchAction { enterRescueUseCase(serviceId) }
             is Command.LeaveRescueMode -> launchAction { leaveRescueUseCase(serviceId) }
-            // Change password
+            is Command.ToggleAutoProlong -> launchAction { setAutoProlong(serviceId, command.enabled) }
             is Command.OpenChangePasswordDialog ->
                 _uiState.update { it.copy(showChangePasswordDialog = true) }
             is Command.DismissChangePasswordDialog ->
@@ -305,7 +285,6 @@ class ServiceDetailViewModel @Inject constructor(
                 _uiState.update { it.copy(showChangePasswordDialog = false) }
                 launchAction { changePasswordUseCase(serviceId, command.newPassword) }
             }
-            // Reinstall
             is Command.OpenReinstallDialog ->
                 _uiState.update { it.copy(showReinstallDialog = true) }
             is Command.DismissReinstallDialog ->
@@ -323,7 +302,6 @@ class ServiceDetailViewModel @Inject constructor(
                     )
                 }
             }
-            // Delete
             is Command.OpenDeleteConfirmDialog ->
                 _uiState.update { it.copy(showDeleteConfirmDialog = true) }
             is Command.DismissDeleteConfirmDialog ->
@@ -332,7 +310,6 @@ class ServiceDetailViewModel @Inject constructor(
                 _uiState.update { it.copy(showDeleteConfirmDialog = false) }
                 launchAction { requestDeletionUseCase(serviceId) }
             }
-            // Network
             is Command.LoadNetworkIfNeeded -> {
                 if (_uiState.value.ipv4List.isEmpty() && !_uiState.value.isNetworkLoading) {
                     _uiState.update { it.copy(isNetworkLoading = true) }
@@ -358,10 +335,13 @@ class ServiceDetailViewModel @Inject constructor(
             }
             is Command.MakeMainIp -> viewModelScope.launch {
                 _uiState.update { it.copy(isNetworkLoading = true) }
-                makeMainIpUseCase(serviceId, command.externalId)
-                loadNetwork()
+                try {
+                    makeMainIpUseCase(serviceId, command.externalId)
+                    loadNetwork()
+                } catch (_: Exception) {
+                    _uiState.update { it.copy(isNetworkLoading = false) }
+                }
             }
-            // Backups
             is Command.RefreshBackups -> viewModelScope.launch {
                 _uiState.update { it.copy(isBackupsRefreshing = true) }
                 loadBackups()
@@ -379,22 +359,31 @@ class ServiceDetailViewModel @Inject constructor(
             is Command.ConfirmCreateBackup -> {
                 _uiState.update { it.copy(showCreateBackupDialog = false, isCreatingBackup = true) }
                 viewModelScope.launch {
-                    createBackupUseCase(serviceId, command.name)
-                    _uiState.update { it.copy(isCreatingBackup = false) }
-                    loadBackups()
+                    try {
+                        createBackupUseCase(serviceId, command.name)
+                        loadBackups()
+                    } finally {
+                        _uiState.update { it.copy(isCreatingBackup = false) }
+                    }
                 }
             }
             is Command.DeleteBackup -> viewModelScope.launch {
                 _uiState.update { it.copy(deletingBackupIds = it.deletingBackupIds + command.backupId) }
-                deleteBackupUseCase(serviceId, command.backupId)
-                _uiState.update { it.copy(deletingBackupIds = it.deletingBackupIds - command.backupId) }
-                loadBackups()
+                try {
+                    deleteBackupUseCase(serviceId, command.backupId)
+                    loadBackups()
+                } finally {
+                    _uiState.update { it.copy(deletingBackupIds = it.deletingBackupIds - command.backupId) }
+                }
             }
             is Command.RestoreBackup -> viewModelScope.launch {
                 _uiState.update { it.copy(restoringBackupId = command.backupId) }
-                restoreBackupUseCase(serviceId, command.backupId)
-                _uiState.update { it.copy(restoringBackupId = null) }
-                loadService()
+                try {
+                    restoreBackupUseCase(serviceId, command.backupId)
+                    loadService()
+                } finally {
+                    _uiState.update { it.copy(restoringBackupId = null) }
+                }
             }
             is Command.OpenScheduleDialog ->
                 _uiState.update { it.copy(showScheduleDialog = true) }
@@ -419,7 +408,6 @@ class ServiceDetailViewModel @Inject constructor(
                 deleteScheduleUseCase(serviceId)
                 loadService()
             }
-            // History
             is Command.LoadHistoryIfNeeded -> {
                 if (_uiState.value.transactions.isEmpty() && !_uiState.value.isHistoryLoading) {
                     _uiState.update { it.copy(isHistoryLoading = true) }
@@ -430,7 +418,6 @@ class ServiceDetailViewModel @Inject constructor(
                 _uiState.update { it.copy(isHistoryRefreshing = true) }
                 loadHistory()
             }
-            // Stats
             is Command.LoadStatsIfNeeded -> {
                 if (_uiState.value.statsData.isEmpty() && !_uiState.value.isStatsLoading) {
                     _uiState.update { it.copy(isStatsLoading = true) }
@@ -445,17 +432,20 @@ class ServiceDetailViewModel @Inject constructor(
                 _uiState.update { it.copy(statsType = command.type, statsData = emptyList(), isStatsLoading = false) }
                 processCommand(Command.LoadStatsIfNeeded)
             }
-            // VNC
             is Command.ConnectVnc -> viewModelScope.launch {
                 _uiState.update { it.copy(isVncLoading = true) }
-                val session = connectVncUseCase(serviceId)
-                _uiState.update {
-                    it.copy(
-                        isVncLoading = false,
-                        showVncDialog = session != null,
-                        vncAddress = session?.address ?: "",
-                        vncPassword = session?.password ?: "",
-                    )
+                try {
+                    val session = connectVncUseCase(serviceId)
+                    _uiState.update {
+                        it.copy(
+                            isVncLoading = false,
+                            showVncDialog = session != null,
+                            vncAddress = session?.address ?: "",
+                            vncPassword = session?.password ?: "",
+                        )
+                    }
+                } catch (_: Exception) {
+                    _uiState.update { it.copy(isVncLoading = false) }
                 }
             }
             is Command.DismissVncDialog ->
@@ -466,28 +456,37 @@ class ServiceDetailViewModel @Inject constructor(
     private fun launchAction(block: suspend () -> Unit) {
         viewModelScope.launch {
             _uiState.update { it.copy(isActionInProgress = true) }
-            block()
-            loadService()
-            _uiState.update { it.copy(isActionInProgress = false) }
+            try {
+                block()
+                loadService()
+            } finally {
+                _uiState.update { it.copy(isActionInProgress = false) }
+            }
         }
     }
 
     private suspend fun loadService() {
-        val accountDeferred = viewModelScope.async { getAccount() }
-        val serviceDeferred = viewModelScope.async { getService(serviceId) }
+        try {
+            coroutineScope {
+                val accountDeferred = async { getAccount() }
+                val serviceDeferred = async { getService(serviceId) }
 
-        var symbol = "€"
-        accountDeferred.await()?.let { acc ->
-            symbol = currencySymbols[acc.currency.uppercase()] ?: acc.currency.uppercase()
-            currencySymbol = symbol
-        }
+                var symbol = "€"
+                accountDeferred.await()?.let { acc ->
+                    symbol = currencySymbols[acc.currency.uppercase()] ?: acc.currency.uppercase()
+                    currencySymbol = symbol
+                }
 
-        val service = serviceDeferred.await() ?: run {
+                val service = serviceDeferred.await() ?: run {
+                    _uiState.update { it.copy(isLoading = false, isRefreshing = false) }
+                    return@coroutineScope
+                }
+
+                _uiState.update { prev -> service.toUiState(symbol, prev) }
+            }
+        } catch (_: Exception) {
             _uiState.update { it.copy(isLoading = false, isRefreshing = false) }
-            return
         }
-
-        _uiState.update { prev -> service.toUiState(symbol, prev) }
     }
 
     private suspend fun loadBackups() {

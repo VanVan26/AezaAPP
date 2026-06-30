@@ -15,4 +15,3 @@ data class NotificationResponseDto(
     val isRead: Boolean = false,
     val createdAt: String = "",
 )
-

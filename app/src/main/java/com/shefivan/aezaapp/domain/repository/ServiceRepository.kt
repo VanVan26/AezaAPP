@@ -16,6 +16,8 @@ interface ServiceRepository {
 
     suspend fun requestDeletion(id: Long)
 
+    suspend fun setAutoProlong(id: Long, enabled: Boolean)
+
     suspend fun resume(id: Long)
 
     suspend fun suspend(id: Long, force: Boolean = false)
@@ -36,4 +38,3 @@ interface ServiceRepository {
 
     suspend fun getTransactions(serviceId: Long): Page<ServiceTransaction>
 }
-

@@ -18,4 +18,3 @@ interface ServiceBackupRepository {
 
     suspend fun deleteSchedule(serviceId: Long)
 }
-

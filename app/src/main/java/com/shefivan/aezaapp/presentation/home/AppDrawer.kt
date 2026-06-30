@@ -21,6 +21,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.MenuBook
@@ -81,6 +82,7 @@ fun AppDrawer(
     onNavigateSupport: () -> Unit,
     onNavigateAccount: () -> Unit = {},
     onNavigateNotifications: () -> Unit = {},
+    onNavigateStock: () -> Unit = {},
     onNavigateSshKeys: () -> Unit = {},
     onNavigateDomains: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -139,7 +141,6 @@ fun AppDrawer(
                 )
             }
 
-            // Поддержка
             NavigationDrawerItem(
                 label = {
                     Text(
@@ -168,7 +169,6 @@ fun AppDrawer(
                 modifier = Modifier.padding(horizontal = 8.dp),
             )
 
-            // Уведомления
             NavigationDrawerItem(
                 label = {
                     Text(
@@ -197,7 +197,34 @@ fun AppDrawer(
                 modifier = Modifier.padding(horizontal = 8.dp),
             )
 
-            // SSH-ключи
+            NavigationDrawerItem(
+                label = {
+                    Text(
+                        text = "Наличие услуг",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Outlined.Inventory2,
+                        contentDescription = null,
+                        modifier = Modifier.size(22.dp),
+                    )
+                },
+                selected = currentRoute == "stock",
+                onClick = { onNavigateStock(); onClose() },
+                colors = NavigationDrawerItemDefaults.colors(
+                    selectedContainerColor = SelectedBg,
+                    unselectedContainerColor = Color.Transparent,
+                    selectedIconColor = TextPrimary,
+                    unselectedIconColor = TextSecondary,
+                    selectedTextColor = TextPrimary,
+                    unselectedTextColor = TextPrimary,
+                ),
+                modifier = Modifier.padding(horizontal = 8.dp),
+            )
+
             NavigationDrawerItem(
                 label = {
                     Text(
@@ -226,7 +253,6 @@ fun AppDrawer(
                 modifier = Modifier.padding(horizontal = 8.dp),
             )
 
-            // Домены
             NavigationDrawerItem(
                 label = {
                     Text(
@@ -255,7 +281,6 @@ fun AppDrawer(
                 modifier = Modifier.padding(horizontal = 8.dp),
             )
 
-            // Аккаунт
             NavigationDrawerItem(
                 label = {
                     Text(
@@ -289,7 +314,6 @@ fun AppDrawer(
             HorizontalDivider(color = BorderColor, modifier = Modifier.padding(horizontal = 16.dp))
             Spacer(Modifier.height(8.dp))
 
-            // Добавить услугу
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -317,7 +341,6 @@ fun AppDrawer(
 
             Spacer(Modifier.height(4.dp))
 
-            // Bottom nav
             bottomNavItems.forEach { item ->
                 NavigationDrawerItem(
                     label = {

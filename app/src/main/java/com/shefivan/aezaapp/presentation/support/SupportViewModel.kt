@@ -23,11 +23,13 @@ import com.shefivan.aezaapp.domain.usecase.support.SendTicketMessageUseCase
 import com.shefivan.aezaapp.domain.usecase.support.SetTicketMessageReactionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -87,7 +89,6 @@ class SupportViewModel @Inject constructor(
         val services: List<ServiceUiItem> = emptyList(),
         val isLoadingServices: Boolean = false,
 
-        // Chat
         val selectedTicket: TicketUiItem? = null,
         val isMessagesLoading: Boolean = false,
         val messages: List<MessageUiItem> = emptyList(),
@@ -96,12 +97,10 @@ class SupportViewModel @Inject constructor(
         val pendingFiles: List<PendingFileUiItem> = emptyList(),
         val isUploading: Boolean = false,
 
-        // Rating
         val ticketRate: TicketRate? = null,
         val showRateDialog: Boolean = false,
         val isRating: Boolean = false,
 
-        // Detail
         val ticketServiceName: String? = null,
     )
 
@@ -152,9 +151,12 @@ class SupportViewModel @Inject constructor(
                 _uiState.update { it.copy(showCreateDialog = false) }
             is Command.ConfirmCreate -> viewModelScope.launch {
                 _uiState.update { it.copy(showCreateDialog = false, isCreating = true) }
-                val ticket = createTicket(CreateTicketInput(name = command.name, body = command.body, serviceId = command.serviceId))
-                _uiState.update { it.copy(isCreating = false) }
-                if (ticket != null) load()
+                try {
+                    val ticket = createTicket(CreateTicketInput(name = command.name, body = command.body, serviceId = command.serviceId))
+                    if (ticket != null) load()
+                } finally {
+                    _uiState.update { it.copy(isCreating = false) }
+                }
             }
             is Command.SelectTicket -> {
                 _uiState.update {
@@ -186,9 +188,14 @@ class SupportViewModel @Inject constructor(
                 viewModelScope.launch {
                     val fileIds = _uiState.value.pendingFiles.map { it.fileId }
                     _uiState.update { it.copy(isSending = true, messageInput = "", pendingFiles = emptyList()) }
-                    sendMessage(ticketId, SendTicketMessageInput(body = body.ifBlank { "📎" }, fileIds = fileIds))
-                    _uiState.update { it.copy(isSending = false) }
-                    loadMessages(ticketId)
+                    try {
+                        sendMessage(ticketId, SendTicketMessageInput(body = body.ifBlank { "📎" }, fileIds = fileIds))
+                        loadMessages(ticketId)
+                    } catch (_: Exception) {
+                        _uiState.update { it.copy(messageInput = body) }
+                    } finally {
+                        _uiState.update { it.copy(isSending = false) }
+                    }
                 }
             }
             is Command.ArchiveTicket -> viewModelScope.launch {
@@ -204,9 +211,12 @@ class SupportViewModel @Inject constructor(
                 val ticketId = _uiState.value.selectedTicket?.id ?: return
                 viewModelScope.launch {
                     _uiState.update { it.copy(showRateDialog = false, isRating = true) }
-                    rateTicket(ticketId, TicketRateInput(value = command.value, comment = command.comment))
-                    loadTicketRate(ticketId)
-                    _uiState.update { it.copy(isRating = false) }
+                    try {
+                        rateTicket(ticketId, TicketRateInput(value = command.value, comment = command.comment))
+                        loadTicketRate(ticketId)
+                    } finally {
+                        _uiState.update { it.copy(isRating = false) }
+                    }
                 }
             }
             is Command.SetReaction -> {
@@ -217,18 +227,22 @@ class SupportViewModel @Inject constructor(
                 }
             }
             is Command.AttachFile -> viewModelScope.launch {
-                val fileName = resolveFileName(command.uri) ?: "file"
                 _uiState.update { it.copy(isUploading = true) }
-                val asset = uploadFile(
-                    bytes = context.contentResolver.openInputStream(command.uri)?.use { it.readBytes() } ?: return@launch,
-                    fileName = fileName,
-                    contentType = command.mimeType,
-                )
-                _uiState.update { state ->
-                    state.copy(
-                        isUploading = false,
-                        pendingFiles = if (asset != null) state.pendingFiles + PendingFileUiItem(asset.id, asset.name) else state.pendingFiles,
-                    )
+                try {
+                    val (fileName, bytes) = withContext(Dispatchers.IO) {
+                        val name = resolveFileName(command.uri) ?: "file"
+                        val data = context.contentResolver.openInputStream(command.uri)?.use { it.readBytes() }
+                        name to data
+                    }
+                    if (bytes == null) return@launch
+                    val asset = uploadFile(bytes = bytes, fileName = fileName, contentType = command.mimeType)
+                    _uiState.update { state ->
+                        state.copy(
+                            pendingFiles = if (asset != null) state.pendingFiles + PendingFileUiItem(asset.id, asset.name) else state.pendingFiles,
+                        )
+                    }
+                } finally {
+                    _uiState.update { it.copy(isUploading = false) }
                 }
             }
             is Command.RemovePendingFile ->
@@ -244,6 +258,7 @@ class SupportViewModel @Inject constructor(
     }
 
     private suspend fun load() {
+        try {
         val tickets = getTickets() ?: run {
             _uiState.update { it.copy(isLoading = false, isRefreshing = false) }
             return
@@ -261,6 +276,9 @@ class SupportViewModel @Inject constructor(
                 closedTickets = tickets.closed.toUiItems("closed"),
                 totalUnread = tickets.totalUnread,
             )
+        }
+        } catch (_: Exception) {
+            _uiState.update { it.copy(isLoading = false, isRefreshing = false) }
         }
     }
 

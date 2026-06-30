@@ -9,6 +9,7 @@ import com.shefivan.aezaapp.domain.error.AppErrorEmitter
 import com.shefivan.aezaapp.data.repository.DomainRepositoryImpl
 import com.shefivan.aezaapp.data.repository.FileRepositoryImpl
 import com.shefivan.aezaapp.data.repository.NotificationRepositoryImpl
+import com.shefivan.aezaapp.data.repository.ProductRepositoryImpl
 import com.shefivan.aezaapp.data.repository.ServiceBackupRepositoryImpl
 import com.shefivan.aezaapp.data.repository.ServiceNetworkRepositoryImpl
 import com.shefivan.aezaapp.data.repository.ServiceRepositoryImpl
@@ -20,6 +21,7 @@ import com.shefivan.aezaapp.domain.repository.AuthRepository
 import com.shefivan.aezaapp.domain.repository.DomainRepository
 import com.shefivan.aezaapp.domain.repository.FileRepository
 import com.shefivan.aezaapp.domain.repository.NotificationRepository
+import com.shefivan.aezaapp.domain.repository.ProductRepository
 import com.shefivan.aezaapp.domain.repository.ServiceBackupRepository
 import com.shefivan.aezaapp.domain.repository.ServiceNetworkRepository
 import com.shefivan.aezaapp.domain.repository.ServiceRepository
@@ -62,6 +64,10 @@ interface DataModule {
     @Binds
     @Singleton
     fun bindNotificationRepository(impl: NotificationRepositoryImpl): NotificationRepository
+
+    @Binds
+    @Singleton
+    fun bindProductRepository(impl: ProductRepositoryImpl): ProductRepository
 
     @Binds
     @Singleton

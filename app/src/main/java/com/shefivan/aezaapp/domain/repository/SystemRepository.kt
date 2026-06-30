@@ -9,4 +9,3 @@ interface SystemRepository {
 
     suspend fun getHealth(): String?
 }
-

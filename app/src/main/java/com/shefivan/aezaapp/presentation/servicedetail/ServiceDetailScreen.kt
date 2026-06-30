@@ -32,7 +32,6 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,7 +44,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
+import com.shefivan.aezaapp.presentation.ui.components.AezaDialog
+import com.shefivan.aezaapp.presentation.ui.components.AezaTextField
 import androidx.compose.material3.Switch
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -55,8 +55,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -94,13 +94,11 @@ fun ServiceDetailScreen(
     onBack: () -> Unit,
     viewModel: ServiceDetailViewModel = hiltViewModel(),
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
     var tabMenuExpanded by rememberSaveable { mutableStateOf(false) }
     val tabCount = uiState.availableTabs.size
     val safeIndex = selectedTabIndex.coerceAtMost((tabCount - 1).coerceAtLeast(0))
-
-    // ── Dialogs ──────────────────────────────────────────────────────────────
 
     if (uiState.showChangePasswordDialog) {
         ChangePasswordDialog(
@@ -150,7 +148,6 @@ fun ServiceDetailScreen(
             onConfirm = { viewModel.processCommand(ServiceDetailViewModel.Command.ConfirmEditPtr(it)) },
         )
     }
-    // ── Layout ───────────────────────────────────────────────────────────────
 
     Column(
         modifier = Modifier
@@ -294,8 +291,6 @@ fun ServiceDetailScreen(
         }
     }
 }
-
-// ── Info tab ─────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -521,7 +516,6 @@ private fun ActionsCard(
             color = TextPrimary
         )
 
-        // Power toggle
         if (uiState.canSuspend || uiState.canResume) {
             ActionToggleRow(
                 label = uiState.statusLabel,
@@ -539,7 +533,10 @@ private fun ActionsCard(
         ActionToggleRow(
             label = "Автопродление",
             checked = uiState.autoProlong,
-            onCheckedChange = null,
+            onCheckedChange = { on ->
+                viewModel.processCommand(ServiceDetailViewModel.Command.ToggleAutoProlong(on))
+            },
+            enabled = !busy,
             trackColor = StatusActive,
         )
 
@@ -575,7 +572,6 @@ private fun ActionsCard(
                 onClick = { viewModel.processCommand(ServiceDetailViewModel.Command.OpenChangePasswordDialog) },
             )
         }
-
 
         if (uiState.canReinstall || uiState.canDelete) {
             HorizontalDivider(color = BorderColor)
@@ -616,8 +612,6 @@ private fun ActionsCard(
         }
     }
 }
-
-// ── Backups tab ───────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -774,8 +768,6 @@ private fun BackupCard(
     }
 }
 
-// ── History tab ───────────────────────────────────────────────────────────────
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HistoryTab(
@@ -847,8 +839,6 @@ private fun TransactionCard(transaction: ServiceDetailViewModel.TransactionUiIte
         }
     }
 }
-
-// ── Network tab ───────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -974,8 +964,6 @@ private fun IpAddressBlock(rows: List<Pair<String, String>>) {
     }
 }
 
-// ── Stats tab ─────────────────────────────────────────────────────────────────
-
 private val statTypes = listOf("cpu" to "CPU", "ram" to "RAM", "disk" to "Диск", "net" to "Сеть")
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1049,8 +1037,6 @@ private fun StatsTab(
     }
 }
 
-// ── VNC tab ───────────────────────────────────────────────────────────────────
-
 @Composable
 private fun VncTab(
     uiState: ServiceDetailViewModel.UiState,
@@ -1100,32 +1086,26 @@ private fun VncTab(
     }
 }
 
-// ── Dialogs ───────────────────────────────────────────────────────────────────
-
 @Composable
 private fun EditPtrDialog(
     currentDomain: String,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
 ) {
-    var domain by remember { mutableStateOf(currentDomain) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Изменить PTR") },
-        text = {
-            OutlinedTextField(
-                value = domain,
-                onValueChange = { domain = it },
-                label = { Text("Домен (PTR-запись)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = { if (domain.isNotBlank()) onConfirm(domain) }) { Text("Сохранить") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
-    )
+    var domain by remember(currentDomain) { mutableStateOf(currentDomain) }
+    AezaDialog(
+        title = "Изменить PTR",
+        onDismiss = onDismiss,
+        confirmText = "Сохранить",
+        confirmEnabled = domain.isNotBlank(),
+        onConfirm = { onConfirm(domain) },
+    ) {
+        AezaTextField(
+            value = domain,
+            onValueChange = { domain = it },
+            label = "Домен (PTR-запись)",
+        )
+    }
 }
 
 @Composable
@@ -1136,7 +1116,7 @@ private fun SetScheduleDialog(
     onConfirm: (ServiceBackupScheduleType, Int, Int?, Int?) -> Unit,
     onDelete: () -> Unit,
 ) {
-    var selectedType by remember {
+    var selectedType by remember(currentType) {
         mutableStateOf(
             when (currentType) {
                 "weekly" -> ServiceBackupScheduleType.WEEKLY
@@ -1145,139 +1125,123 @@ private fun SetScheduleDialog(
             }
         )
     }
-    var limit by remember { mutableStateOf(currentLimit.toString()) }
+    var limit by remember(currentLimit) { mutableStateOf(currentLimit.toString()) }
     var weekDay by remember { mutableStateOf("1") }
     var monthDay by remember { mutableStateOf("1") }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Расписание бэкапов") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Тип расписания", fontSize = 12.sp, color = TextSecondary)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(
-                        ServiceBackupScheduleType.DAILY to "Ежедневно",
-                        ServiceBackupScheduleType.WEEKLY to "Еженедельно",
-                        ServiceBackupScheduleType.MONTHLY to "Ежемесячно",
-                    ).forEach { (type, label) ->
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (selectedType == type) TextPrimary else Background)
-                                .clickable { selectedType = type }
-                                .padding(horizontal = 10.dp, vertical = 6.dp),
-                        ) {
-                            Text(label, fontSize = 12.sp, color = if (selectedType == type) Color.White else TextPrimary)
-                        }
-                    }
-                }
-                OutlinedTextField(
-                    value = limit,
-                    onValueChange = { limit = it.filter { c -> c.isDigit() } },
-                    label = { Text("Хранить (шт.)") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                if (selectedType == ServiceBackupScheduleType.WEEKLY) {
-                    OutlinedTextField(
-                        value = weekDay,
-                        onValueChange = { weekDay = it.filter { c -> c.isDigit() } },
-                        label = { Text("День недели (1=Пн … 7=Вс)") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                if (selectedType == ServiceBackupScheduleType.MONTHLY) {
-                    OutlinedTextField(
-                        value = monthDay,
-                        onValueChange = { monthDay = it.filter { c -> c.isDigit() } },
-                        label = { Text("День месяца (1–31)") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                if (currentType != null) {
-                    TextButton(onClick = onDelete, modifier = Modifier.fillMaxWidth()) {
-                        Text("Отключить расписание", color = DangerColor, fontSize = 13.sp)
-                    }
+    AezaDialog(
+        title = "Расписание бэкапов",
+        onDismiss = onDismiss,
+        confirmText = "Сохранить",
+        onConfirm = {
+            onConfirm(
+                selectedType,
+                limit.toIntOrNull() ?: 3,
+                if (selectedType == ServiceBackupScheduleType.WEEKLY) weekDay.toIntOrNull() else null,
+                if (selectedType == ServiceBackupScheduleType.MONTHLY) monthDay.toIntOrNull() else null,
+            )
+        },
+    ) {
+        Text("Тип расписания", fontSize = 12.sp, color = TextSecondary)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(
+                ServiceBackupScheduleType.DAILY to "Ежедневно",
+                ServiceBackupScheduleType.WEEKLY to "Еженедельно",
+                ServiceBackupScheduleType.MONTHLY to "Ежемесячно",
+            ).forEach { (type, label) ->
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (selectedType == type) TextPrimary else Background)
+                        .clickable { selectedType = type }
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                ) {
+                    Text(label, fontSize = 12.sp, color = if (selectedType == type) Color.White else TextPrimary)
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                onConfirm(
-                    selectedType,
-                    limit.toIntOrNull() ?: 3,
-                    if (selectedType == ServiceBackupScheduleType.WEEKLY) weekDay.toIntOrNull() else null,
-                    if (selectedType == ServiceBackupScheduleType.MONTHLY) monthDay.toIntOrNull() else null,
-                )
-            }) { Text("Сохранить") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
-    )
+        }
+        AezaTextField(
+            value = limit,
+            onValueChange = { limit = it.filter { c -> c.isDigit() } },
+            label = "Хранить (шт.)",
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        )
+        if (selectedType == ServiceBackupScheduleType.WEEKLY) {
+            AezaTextField(
+                value = weekDay,
+                onValueChange = { weekDay = it.filter { c -> c.isDigit() } },
+                label = "День недели (1=Пн … 7=Вс)",
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            )
+        }
+        if (selectedType == ServiceBackupScheduleType.MONTHLY) {
+            AezaTextField(
+                value = monthDay,
+                onValueChange = { monthDay = it.filter { c -> c.isDigit() } },
+                label = "День месяца (1–31)",
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            )
+        }
+        if (currentType != null) {
+            TextButton(onClick = onDelete, modifier = Modifier.fillMaxWidth()) {
+                Text("Отключить расписание", color = DangerColor, fontSize = 13.sp)
+            }
+        }
+    }
 }
 
 @Composable
 private fun VncSessionDialog(address: String, password: String, onDismiss: () -> Unit) {
     val context = LocalContext.current
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("VNC сессия") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                CopyableRow(label = "Адрес", value = address) {
-                    copyToClipboard(context, "Адрес VNC", address)
-                }
-                HorizontalDivider(color = BorderColor)
-                CopyableRow(label = "Пароль", value = password) {
-                    copyToClipboard(context, "Пароль VNC", password)
-                }
-                Text(
-                    "Используйте VNC-клиент для подключения. Сессия действительна ограниченное время.",
-                    fontSize = 12.sp,
-                    color = TextSecondary,
-                )
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Закрыть") } },
-    )
+    AezaDialog(
+        title = "VNC сессия",
+        onDismiss = onDismiss,
+        confirmText = "Закрыть",
+        onConfirm = onDismiss,
+        dismissText = null,
+    ) {
+        CopyableRow(label = "Адрес", value = address) {
+            copyToClipboard(context, "Адрес VNC", address)
+        }
+        HorizontalDivider(color = BorderColor)
+        CopyableRow(label = "Пароль", value = password) {
+            copyToClipboard(context, "Пароль VNC", password)
+        }
+        Text(
+            "Используйте VNC-клиент для подключения. Сессия действительна ограниченное время.",
+            fontSize = 12.sp,
+            color = TextSecondary,
+        )
+    }
 }
 
 @Composable
 private fun ChangePasswordDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
     var password by remember { mutableStateOf("") }
     var visible by remember { mutableStateOf(false) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Сменить пароль") },
-        text = {
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("Новый пароль") },
-                singleLine = true,
-                visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                trailingIcon = {
-                    IconButton(onClick = { visible = !visible }) {
-                        Icon(
-                            if (visible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                            contentDescription = null
-                        )
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = { if (password.isNotBlank()) onConfirm(password) }) { Text("Сохранить") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
-    )
+    AezaDialog(
+        title = "Сменить пароль",
+        onDismiss = onDismiss,
+        confirmText = "Сохранить",
+        confirmEnabled = password.isNotBlank(),
+        onConfirm = { onConfirm(password) },
+    ) {
+        AezaTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = "Новый пароль",
+            visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            trailingIcon = {
+                IconButton(onClick = { visible = !visible }) {
+                    Icon(
+                        if (visible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                        contentDescription = null,
+                    )
+                }
+            },
+        )
+    }
 }
 
 @Composable
@@ -1289,96 +1253,75 @@ private fun ReinstallDialog(
     var recipe by remember { mutableStateOf("default") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Переустановить систему") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = os,
-                    onValueChange = { os = it },
-                    label = { Text("Образ ОС (slug)") },
-                    placeholder = { Text("ubuntu-24.04") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = recipe,
-                    onValueChange = { recipe = it },
-                    label = { Text("Рецепт") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text("Пароль root") },
-                    singleLine = true,
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    trailingIcon = {
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(
-                                if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                                contentDescription = null
-                            )
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                if (os.isNotBlank() && password.isNotBlank()) onConfirm(
-                    os,
-                    recipe,
-                    password
-                )
-            }) {
-                Text("Переустановить", color = DangerColor)
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
-    )
+    AezaDialog(
+        title = "Переустановить систему",
+        onDismiss = onDismiss,
+        confirmText = "Переустановить",
+        confirmEnabled = os.isNotBlank() && password.isNotBlank(),
+        onConfirm = { onConfirm(os, recipe, password) },
+    ) {
+        AezaTextField(
+            value = os,
+            onValueChange = { os = it },
+            label = "Образ ОС (slug)",
+            placeholder = "ubuntu-24.04",
+        )
+        AezaTextField(
+            value = recipe,
+            onValueChange = { recipe = it },
+            label = "Рецепт",
+        )
+        AezaTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = "Пароль root",
+            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            trailingIcon = {
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(
+                        if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                        contentDescription = null,
+                    )
+                }
+            },
+        )
+    }
 }
 
 @Composable
 private fun DeleteConfirmDialog(name: String, onDismiss: () -> Unit, onConfirm: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Удалить услугу?") },
-        text = { Text("Вы собираетесь запросить удаление «$name». Это действие необратимо.") },
-        confirmButton = {
-            TextButton(onClick = onConfirm) { Text("Удалить", color = DangerColor) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
-    )
+    AezaDialog(
+        title = "Удалить услугу?",
+        onDismiss = onDismiss,
+        confirmText = "Удалить",
+        onConfirm = onConfirm,
+    ) {
+        Text(
+            "Вы собираетесь запросить удаление «$name». Это действие необратимо.",
+            fontSize = 14.sp,
+            color = TextPrimary,
+        )
+    }
 }
 
 @Composable
 private fun CreateBackupDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
     var name by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Создать бэкап") },
-        text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Название") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = { if (name.isNotBlank()) onConfirm(name) }) { Text("Создать") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
-    )
+    AezaDialog(
+        title = "Создать бэкап",
+        onDismiss = onDismiss,
+        confirmText = "Создать",
+        confirmEnabled = name.isNotBlank(),
+        onConfirm = { onConfirm(name) },
+    ) {
+        AezaTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = "Название",
+        )
+    }
 }
-
-// ── Shared components ─────────────────────────────────────────────────────────
 
 @Composable
 private fun DetailTopBar(title: String, onBack: () -> Unit) {

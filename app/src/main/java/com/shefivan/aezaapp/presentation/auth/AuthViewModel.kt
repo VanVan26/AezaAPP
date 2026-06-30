@@ -7,6 +7,7 @@ import com.shefivan.aezaapp.domain.usecase.account.GetAccountUseCase
 import com.shefivan.aezaapp.domain.usecase.auth.ClearApiKeyUseCase
 import com.shefivan.aezaapp.domain.usecase.auth.GetApiKeyUseCase
 import com.shefivan.aezaapp.domain.usecase.auth.SaveApiKeyUseCase
+import com.shefivan.aezaapp.notification.BackgroundSyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +25,7 @@ class AuthViewModel @Inject constructor(
     private val clearApiKey: ClearApiKeyUseCase,
     private val getAccount: GetAccountUseCase,
     private val errorEmitter: AppErrorEmitter,
+    private val backgroundSync: BackgroundSyncManager,
 ) : ViewModel() {
 
     data class UiState(
@@ -57,7 +59,9 @@ class AuthViewModel @Inject constructor(
         }
         viewModelScope.launch {
             errorEmitter.errors.collect { error ->
-                _uiState.update { it.copy(isLoading = false, error = error.message) }
+                if (_uiState.value.isLoading) {
+                    _uiState.update { it.copy(isLoading = false, error = error.message) }
+                }
             }
         }
     }
@@ -72,15 +76,23 @@ class AuthViewModel @Inject constructor(
 
     private fun submit() {
         val key = _uiState.value.apiKey.trim()
-        if (key.isBlank()) return
+        if (key.isBlank() || _uiState.value.isLoading) return
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            saveApiKey(key)
-            val account = getAccount()
-            if (account != null) {
-                _events.send(UiEvent.NavigateToHome)
-            } else {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            try {
+                saveApiKey(key)
+                val account = getAccount()
+                if (account != null) {
+                    backgroundSync.start()
+                    _uiState.update { it.copy(isLoading = false) }
+                    _events.send(UiEvent.NavigateToHome)
+                } else {
+                    clearApiKey()
+                    _uiState.update { it.copy(isLoading = false) }
+                }
+            } catch (e: Exception) {
                 clearApiKey()
+                _uiState.update { it.copy(isLoading = false, error = "Ошибка сохранения ключа") }
             }
         }
     }

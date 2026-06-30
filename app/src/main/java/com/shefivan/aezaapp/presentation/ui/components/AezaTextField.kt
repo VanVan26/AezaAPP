@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 private val FieldBackground = Color(0xFFF4F4F4)
 private val FieldText = Color(0xFF333333)
 private val FieldLabel = Color(0xFF999999)
+private val FieldError = Color(0xFFD32F2F)
 private val FieldShape = RoundedCornerShape(16.dp)
 
 @Composable
@@ -37,11 +38,21 @@ fun AezaTextField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     trailingIcon: @Composable (() -> Unit)? = null,
+    placeholder: String? = null,
     enabled: Boolean = true,
+    readOnly: Boolean = false,
+    singleLine: Boolean = true,
+    minLines: Int = 1,
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
+    isError: Boolean = false,
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val borderColor by animateColorAsState(
-        targetValue = if (isFocused) FieldText else Color.Transparent,
+        targetValue = when {
+            isError -> FieldError
+            isFocused -> FieldText
+            else -> Color.Transparent
+        },
         animationSpec = tween(200),
         label = "border",
     )
@@ -50,14 +61,19 @@ fun AezaTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
+        placeholder = placeholder?.let { { Text(it) } },
         modifier = modifier
             .fillMaxWidth()
-            .height(60.dp)
+            .then(if (singleLine) Modifier.height(60.dp) else Modifier)
             .onFocusChanged { isFocused = it.isFocused }
             .border(1.dp, borderColor, FieldShape),
         shape = FieldShape,
-        singleLine = true,
+        singleLine = singleLine,
+        minLines = minLines,
+        maxLines = maxLines,
         enabled = enabled,
+        readOnly = readOnly,
+        isError = isError,
         visualTransformation = visualTransformation,
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,
@@ -66,13 +82,16 @@ fun AezaTextField(
             focusedContainerColor = FieldBackground,
             unfocusedContainerColor = FieldBackground,
             disabledContainerColor = FieldBackground,
+            errorContainerColor = FieldBackground,
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent,
             disabledIndicatorColor = Color.Transparent,
+            errorIndicatorColor = Color.Transparent,
             focusedTextColor = FieldText,
             unfocusedTextColor = FieldText,
             focusedLabelColor = FieldLabel,
             unfocusedLabelColor = FieldLabel,
+            errorLabelColor = FieldError,
             cursorColor = FieldText,
         ),
     )

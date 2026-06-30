@@ -93,6 +93,11 @@ data class ServiceSuspendRequestDto(
 )
 
 @Serializable
+data class EditServiceRequestDto(
+    val autoProlong: Boolean? = null,
+)
+
+@Serializable
 data class ChangePasswordRequestDto(
     val password: String,
 )

@@ -13,4 +13,3 @@ interface NotificationRepository {
 
     suspend fun markAsRead(id: Long)
 }
-

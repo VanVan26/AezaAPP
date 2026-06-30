@@ -27,12 +27,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -56,8 +57,9 @@ fun AuthScreen(
     onNavigateToHome: () -> Unit,
     viewModel: AuthViewModel = hiltViewModel(),
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -126,7 +128,10 @@ fun AuthScreen(
                         keyboardType = KeyboardType.Password,
                         imeAction = ImeAction.Done,
                     ),
-                    keyboardActions = KeyboardActions(onDone = { viewModel.processCommand(AuthViewModel.Command.Submit) }),
+                    keyboardActions = KeyboardActions(onDone = {
+                        keyboardController?.hide()
+                        viewModel.processCommand(AuthViewModel.Command.Submit)
+                    }),
                     trailingIcon = {
                         IconButton(onClick = { viewModel.processCommand(AuthViewModel.Command.ToggleShowApiKey) }) {
                             Icon(
@@ -158,17 +163,6 @@ fun AuthScreen(
                         .padding(vertical = 4.dp),
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                val error = uiState.error
-                if (error != null) {
-                    Text(
-                        text = error,
-                        fontSize = 13.sp,
-                        color = Color(0xFFD32F2F),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 12.dp),
-                    )
-                }
                 Button(
                     onClick = { viewModel.processCommand(AuthViewModel.Command.Submit) },
                     modifier = Modifier

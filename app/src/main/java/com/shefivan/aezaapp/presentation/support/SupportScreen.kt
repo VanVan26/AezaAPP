@@ -36,7 +36,6 @@ import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.StarBorder
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -46,8 +45,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
+import com.shefivan.aezaapp.presentation.ui.components.AezaDialog
+import com.shefivan.aezaapp.presentation.ui.components.AezaTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -592,90 +592,74 @@ private fun CreateTicketDialog(
     var selectedService by remember { mutableStateOf<SupportViewModel.ServiceUiItem?>(null) }
     var dropdownExpanded by remember { mutableStateOf(false) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Новое обращение") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Тема") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = body,
-                    onValueChange = { body = it },
-                    label = { Text("Описание") },
-                    minLines = 3,
-                    maxLines = 6,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                ExposedDropdownMenuBox(
+    AezaDialog(
+        title = "Новое обращение",
+        onDismiss = onDismiss,
+        confirmText = "Отправить",
+        confirmEnabled = name.isNotBlank() && body.isNotBlank(),
+        confirmLoading = isCreating,
+        onConfirm = { onConfirm(name, body, selectedService?.id) },
+    ) {
+        AezaTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = "Тема",
+        )
+        AezaTextField(
+            value = body,
+            onValueChange = { body = it },
+            label = "Описание",
+            singleLine = false,
+            minLines = 3,
+            maxLines = 6,
+        )
+        ExposedDropdownMenuBox(
+            expanded = dropdownExpanded,
+            onExpandedChange = { if (!isLoadingServices) dropdownExpanded = it },
+        ) {
+            AezaTextField(
+                value = when {
+                    isLoadingServices -> "Загрузка услуг…"
+                    selectedService != null -> selectedService!!.name
+                    else -> ""
+                },
+                onValueChange = {},
+                readOnly = true,
+                label = "Услуга (необязательно)",
+                trailingIcon = {
+                    if (isLoadingServices) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = TextSecondary)
+                    } else {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded)
+                    }
+                },
+                modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+            )
+            if (services.isNotEmpty()) {
+                ExposedDropdownMenu(
                     expanded = dropdownExpanded,
-                    onExpandedChange = { if (!isLoadingServices) dropdownExpanded = it },
+                    onDismissRequest = { dropdownExpanded = false },
                 ) {
-                    OutlinedTextField(
-                        value = when {
-                            isLoadingServices -> "Загрузка услуг…"
-                            selectedService != null -> selectedService!!.name
-                            else -> ""
+                    DropdownMenuItem(
+                        text = { Text("Без услуги", color = TextSecondary) },
+                        onClick = {
+                            selectedService = null
+                            dropdownExpanded = false
                         },
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Услуга (необязательно)") },
-                        trailingIcon = {
-                            if (isLoadingServices) {
-                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = TextSecondary)
-                            } else {
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded)
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
                     )
-                    if (services.isNotEmpty()) {
-                        ExposedDropdownMenu(
-                            expanded = dropdownExpanded,
-                            onDismissRequest = { dropdownExpanded = false },
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Без услуги", color = TextSecondary) },
-                                onClick = {
-                                    selectedService = null
-                                    dropdownExpanded = false
-                                },
-                            )
-                            services.forEach { service ->
-                                DropdownMenuItem(
-                                    text = { Text(service.name) },
-                                    onClick = {
-                                        selectedService = service
-                                        dropdownExpanded = false
-                                    },
-                                )
-                            }
-                        }
+                    services.forEach { service ->
+                        DropdownMenuItem(
+                            text = { Text(service.name) },
+                            onClick = {
+                                selectedService = service
+                                dropdownExpanded = false
+                            },
+                        )
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { if (name.isNotBlank() && body.isNotBlank()) onConfirm(name, body, selectedService?.id) },
-                enabled = !isCreating,
-            ) {
-                if (isCreating) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = TextPrimary)
-                } else {
-                    Text("Отправить")
-                }
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
-    )
+        }
+    }
 }
 
 @Composable
@@ -688,48 +672,36 @@ private fun RateTicketDialog(
     var selectedStar by remember { mutableIntStateOf(if (currentRate != null) currentRate + 1 else 0) }
     var comment by remember { mutableStateOf("") }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Оцените поддержку") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    for (i in 1..5) {
-                        IconButton(onClick = { selectedStar = i }) {
-                            Icon(
-                                imageVector = if (i <= selectedStar) Icons.Outlined.Star else Icons.Outlined.StarBorder,
-                                contentDescription = "$i звезд",
-                                tint = if (i <= selectedStar) StarActive else TextSecondary,
-                                modifier = Modifier.size(32.dp),
-                            )
-                        }
-                    }
-                }
-                OutlinedTextField(
-                    value = comment,
-                    onValueChange = { comment = it },
-                    label = { Text("Комментарий (необязательно)") },
-                    minLines = 2,
-                    maxLines = 4,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { if (selectedStar > 0) onConfirm(selectedStar - 1, comment.trim().ifBlank { null }) },
-                enabled = selectedStar > 0 && !isRating,
-            ) {
-                if (isRating) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = TextPrimary)
-                } else {
-                    Text("Отправить")
+    AezaDialog(
+        title = "Оцените поддержку",
+        onDismiss = onDismiss,
+        confirmText = "Отправить",
+        confirmEnabled = selectedStar > 0,
+        confirmLoading = isRating,
+        onConfirm = { onConfirm(selectedStar - 1, comment.trim().ifBlank { null }) },
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            for (i in 1..5) {
+                IconButton(onClick = { selectedStar = i }) {
+                    Icon(
+                        imageVector = if (i <= selectedStar) Icons.Outlined.Star else Icons.Outlined.StarBorder,
+                        contentDescription = "$i звезд",
+                        tint = if (i <= selectedStar) StarActive else TextSecondary,
+                        modifier = Modifier.size(32.dp),
+                    )
                 }
             }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
-    )
+        }
+        AezaTextField(
+            value = comment,
+            onValueChange = { comment = it },
+            label = "Комментарий (необязательно)",
+            singleLine = false,
+            minLines = 2,
+            maxLines = 4,
+        )
+    }
 }

@@ -4,10 +4,12 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -25,11 +27,12 @@ fun AezaPrimaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    loading: Boolean = false,
 ) {
     Button(
         onClick = onClick,
         modifier = modifier,
-        enabled = enabled,
+        enabled = enabled && !loading,
         shape = ButtonShape,
         contentPadding = ButtonPadding,
         elevation = ButtonDefaults.buttonElevation(
@@ -45,7 +48,15 @@ fun AezaPrimaryButton(
             disabledContentColor = Color(0xFFAAAAAA),
         ),
     ) {
-        Text(text = text, fontSize = 16.sp, fontWeight = FontWeight.Medium, lineHeight = 24.sp)
+        if (loading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                strokeWidth = 2.dp,
+                color = Color.White,
+            )
+        } else {
+            Text(text = text, fontSize = 16.sp, fontWeight = FontWeight.Medium, lineHeight = 24.sp)
+        }
     }
 }
 
@@ -88,6 +99,7 @@ fun AezaButtonRow(
     modifier: Modifier = Modifier,
     primaryEnabled: Boolean = true,
     secondaryEnabled: Boolean = true,
+    primaryLoading: Boolean = false,
 ) {
     Row(modifier = modifier.fillMaxWidth()) {
         AezaSecondaryButton(
@@ -101,6 +113,7 @@ fun AezaButtonRow(
             text = primaryText,
             onClick = onPrimaryClick,
             enabled = primaryEnabled,
+            loading = primaryLoading,
             modifier = Modifier.weight(1f),
         )
     }

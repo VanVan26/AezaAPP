@@ -31,4 +31,3 @@ data class EditSshKeyRequestDto(
     val publicKey: String? = null,
     val autoAssign: Boolean? = null,
 )
-

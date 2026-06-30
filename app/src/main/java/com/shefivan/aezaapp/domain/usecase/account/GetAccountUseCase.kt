@@ -5,7 +5,6 @@ import com.shefivan.aezaapp.domain.error.AppErrorEmitter
 import com.shefivan.aezaapp.domain.error.safeApiCall
 import javax.inject.Inject
 
-
 class GetAccountUseCase @Inject constructor(
     private val repository: AccountRepository,
     private val errors: AppErrorEmitter,

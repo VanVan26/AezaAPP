@@ -7,4 +7,3 @@ interface AuthRepository {
 
     suspend fun clearApiKey()
 }
-
