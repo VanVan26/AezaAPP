@@ -14,3 +14,12 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Signing
+/keystore.properties
+*.jks
+*.keystore
+
+# Android Studio noise
+/.idea/deviceManager.xml
+/.idea/studiobot.xml
