@@ -2,10 +2,8 @@ package com.shefivan.aezaapp.presentation.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.shefivan.aezaapp.domain.error.AppErrorEmitter
 import com.shefivan.aezaapp.domain.usecase.account.GetAccountUseCase
 import com.shefivan.aezaapp.domain.usecase.auth.ClearApiKeyUseCase
-import com.shefivan.aezaapp.domain.usecase.auth.GetApiKeyUseCase
 import com.shefivan.aezaapp.domain.usecase.auth.SaveApiKeyUseCase
 import com.shefivan.aezaapp.notification.BackgroundSyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,10 +19,8 @@ import javax.inject.Inject
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val saveApiKey: SaveApiKeyUseCase,
-    private val getApiKey: GetApiKeyUseCase,
     private val clearApiKey: ClearApiKeyUseCase,
     private val getAccount: GetAccountUseCase,
-    private val errorEmitter: AppErrorEmitter,
     private val backgroundSync: BackgroundSyncManager,
 ) : ViewModel() {
 
@@ -32,7 +28,6 @@ class AuthViewModel @Inject constructor(
         val apiKey: String = "",
         val isLoading: Boolean = false,
         val showApiKey: Boolean = false,
-        val error: String? = null,
     )
 
     sealed interface UiEvent {
@@ -51,24 +46,9 @@ class AuthViewModel @Inject constructor(
     private val _events = Channel<UiEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
 
-    init {
-        viewModelScope.launch {
-            if (getApiKey() != null) {
-                _events.send(UiEvent.NavigateToHome)
-            }
-        }
-        viewModelScope.launch {
-            errorEmitter.errors.collect { error ->
-                if (_uiState.value.isLoading) {
-                    _uiState.update { it.copy(isLoading = false, error = error.message) }
-                }
-            }
-        }
-    }
-
     fun processCommand(command: Command) {
         when (command) {
-            is Command.ApiKeyChanged -> _uiState.update { it.copy(apiKey = command.value, error = null) }
+            is Command.ApiKeyChanged -> _uiState.update { it.copy(apiKey = command.value) }
             is Command.ToggleShowApiKey -> _uiState.update { it.copy(showApiKey = !it.showApiKey) }
             is Command.Submit -> submit()
         }
@@ -78,7 +58,7 @@ class AuthViewModel @Inject constructor(
         val key = _uiState.value.apiKey.trim()
         if (key.isBlank() || _uiState.value.isLoading) return
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            _uiState.update { it.copy(isLoading = true) }
             try {
                 saveApiKey(key)
                 val account = getAccount()
@@ -92,7 +72,7 @@ class AuthViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 clearApiKey()
-                _uiState.update { it.copy(isLoading = false, error = "Ошибка сохранения ключа") }
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }

@@ -2,7 +2,6 @@ package com.shefivan.aezaapp
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -73,10 +72,12 @@ class MainActivity : ComponentActivity() {
         notificationManager.ensureChannels()
         maybeRequestNotificationPermission()
 
-        if (apiKeyProvider.get() != null) {
+        val loggedIn = apiKeyProvider.get() != null
+        if (loggedIn) {
             backgroundSync.start()
             maybeRequestBatteryExemption()
         }
+        val startDestination: Screen = if (loggedIn) Screen.Home else Screen.Auth
 
         navTarget.value = intent?.getStringExtra(AezaNotificationManager.EXTRA_NAV_TARGET)
 
@@ -172,6 +173,7 @@ class MainActivity : ComponentActivity() {
                     ) { innerPadding ->
                         AppNavGraph(
                             navController = navController,
+                            startDestination = startDestination,
                             modifier = Modifier.padding(innerPadding),
                             onOpenDrawer = {
                                 val entry = backStackEntry
@@ -207,7 +209,7 @@ class MainActivity : ComponentActivity() {
         val powerManager = getSystemService(POWER_SERVICE) as? PowerManager ?: return
         if (powerManager.isIgnoringBatteryOptimizations(packageName)) return
 
-        val prefs = getSharedPreferences(APP_PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences(APP_PREFS_NAME, MODE_PRIVATE)
         if (prefs.getBoolean(KEY_BATTERY_PROMPTED, false)) return
         prefs.edit { putBoolean(KEY_BATTERY_PROMPTED, true) }
 

@@ -1,8 +1,11 @@
 package com.shefivan.aezaapp.presentation.navigation
 
+import androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -17,35 +20,52 @@ import com.shefivan.aezaapp.presentation.sshkeys.SshKeysScreen
 import com.shefivan.aezaapp.presentation.stock.StockWatchScreen
 import com.shefivan.aezaapp.presentation.support.SupportScreen
 
+private const val TRANSITION_DURATION = 240
+
 @Composable
 fun AppNavGraph(
-    navController: NavHostController,
     modifier: Modifier = Modifier,
+    navController: NavHostController,
+    startDestination: Screen = Screen.Auth,
     onOpenDrawer: () -> Unit = {},
 ) {
-    fun settled(): Boolean =
-        navController.currentBackStackEntry?.lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) == true
-
     fun goBack() {
-        if (settled()) navController.popBackStack()
+        navController.popBackStack()
     }
 
     fun navigate(screen: Screen) {
-        if (settled()) navController.navigate(screen)
+        navController.navigate(screen) {
+            launchSingleTop = true
+        }
     }
 
     NavHost(
         navController = navController,
-        startDestination = Screen.Auth,
+        startDestination = startDestination,
         modifier = modifier,
+        enterTransition = {
+            slideIntoContainer(SlideDirection.Left, tween(TRANSITION_DURATION)) +
+                fadeIn(tween(TRANSITION_DURATION))
+        },
+        exitTransition = {
+            slideOutOfContainer(SlideDirection.Left, tween(TRANSITION_DURATION)) +
+                fadeOut(tween(TRANSITION_DURATION))
+        },
+        popEnterTransition = {
+            slideIntoContainer(SlideDirection.Right, tween(TRANSITION_DURATION)) +
+                fadeIn(tween(TRANSITION_DURATION))
+        },
+        popExitTransition = {
+            slideOutOfContainer(SlideDirection.Right, tween(TRANSITION_DURATION)) +
+                fadeOut(tween(TRANSITION_DURATION))
+        },
     ) {
         composable<Screen.Auth> {
             AuthScreen(
                 onNavigateToHome = {
-                    if (settled()) {
-                        navController.navigate(Screen.Home) {
-                            popUpTo(Screen.Auth) { inclusive = true }
-                        }
+                    navController.navigate(Screen.Home) {
+                        popUpTo(Screen.Auth) { inclusive = true }
+                        launchSingleTop = true
                     }
                 }
             )
@@ -74,10 +94,9 @@ fun AppNavGraph(
             AccountScreen(
                 onBack = { goBack() },
                 onNavigateToAuth = {
-                    if (settled()) {
-                        navController.navigate(Screen.Auth) {
-                            popUpTo(0) { inclusive = true }
-                        }
+                    navController.navigate(Screen.Auth) {
+                        popUpTo(0) { inclusive = true }
+                        launchSingleTop = true
                     }
                 },
             )

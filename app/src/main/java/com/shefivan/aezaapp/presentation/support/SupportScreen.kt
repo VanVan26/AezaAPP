@@ -341,7 +341,7 @@ private fun ChatView(uiState: SupportViewModel.UiState, viewModel: SupportViewMo
             .navigationBarsPadding(),
     ) {
         if (uiState.isMessagesLoading) {
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = TextPrimary)
             }
         } else {
